@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: MQTTX Web
+APP_NAME="mqttx"
+APP_DESCRIPTION="Web-based MQTT client for testing and debugging MQTT brokers and topics"
+APP_CATEGORY="automation"
+APP_PORT_VAR="MQTTX_PORT"
+APP_DEFAULT_HOST_PORT="8351"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="mqtt"
+APP_AUTH="tinyauth"
+APP_PROFILES="automation,all"
+APP_IMAGE="emqx/mqttx-web:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/mqttx.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="MQTTX Web is a static MQTT debugging client — no auth built in, TinyAuth recommended. Connect it to your Mosquitto broker in the web UI. Useful for monitoring MQTT topics and publishing test messages."

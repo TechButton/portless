@@ -1,0 +1,23 @@
+services:
+  # Komga - Comic and Manga Server
+  # https://github.com/gotson/komga
+  komga:
+    image: gotson/komga:latest
+    container_name: komga
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    ports:
+      - "$KOMGA_PORT:25600"
+    volumes:
+      - $DOCKERDIR/appdata/komga:/config
+      # Map your comics/manga library:
+      # - /path/to/comics:/comics:ro
+      - /etc/localtime:/etc/localtime:ro
+    user: "$PUID:$PGID"
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Flowise
+APP_NAME="flowise"
+APP_DESCRIPTION="Drag-and-drop visual builder for LLM workflows, chatbots, and AI agents"
+APP_CATEGORY="ai"
+APP_PORT_VAR="FLOWISE_PORT"
+APP_DEFAULT_HOST_PORT="8347"
+APP_SERVICE_PORT="3000"
+APP_DEFAULT_SUBDOMAIN="flowise"
+APP_AUTH="none"
+APP_PROFILES="ai,all"
+APP_IMAGE="flowiseai/flowise:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/flowise.yml"
+APP_APPDATA_DIR="appdata/flowise"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Flowise has optional username/password authentication (set FLOWISE_USERNAME and FLOWISE_PASSWORD env vars). Pairs well with Ollama for local LLM inference. Build chains, agents, and RAG pipelines visually."

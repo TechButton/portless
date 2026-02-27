@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Mosquitto
+APP_NAME="mosquitto"
+APP_DESCRIPTION="Lightweight MQTT message broker — required by Home Assistant, Node-RED, and IoT devices"
+APP_CATEGORY="automation"
+APP_PORT_VAR="MOSQUITTO_PORT"
+APP_DEFAULT_HOST_PORT="1883"
+APP_SERVICE_PORT="1883"
+APP_DEFAULT_SUBDOMAIN=""
+APP_AUTH="none"
+APP_PROFILES="automation,all"
+APP_IMAGE="eclipse-mosquitto:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/mosquitto.yml"
+APP_APPDATA_DIR="appdata/mosquitto"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Mosquitto is an MQTT broker — no web UI. Exposes MQTT on port 1883 and WebSocket on port 9001. Configure authentication in appdata/mosquitto/config/mosquitto.conf. Required for Home Assistant MQTT integration and most IoT sensors."

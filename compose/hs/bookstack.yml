@@ -1,0 +1,51 @@
+services:
+  # BookStack - Wiki and Documentation
+  # https://github.com/BookStackApp/BookStack
+  bookstack:
+    image: lscr.io/linuxserver/bookstack:latest
+    container_name: bookstack
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["documents", "all"]
+    networks:
+      - default
+    ports:
+      - "$BOOKSTACK_PORT:80"
+    volumes:
+      - $DOCKERDIR/appdata/bookstack:/config
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - bookstack-db
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      APP_URL: "https://wiki.${DOMAINNAME_1}"
+      DB_HOST: bookstack-db
+      DB_PORT: 3306
+      DB_USER: bookstack
+      DB_PASS: ${BOOKSTACK_DB_PASSWORD:-changeme123}
+      DB_DATABASE: bookstack
+    # DOCKER-LABELS-PLACEHOLDER
+
+  # MariaDB for BookStack (dedicated instance)
+  bookstack-db:
+    image: lscr.io/linuxserver/mariadb:latest
+    container_name: bookstack-db
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["documents", "all"]
+    networks:
+      - default
+    volumes:
+      - $DOCKERDIR/appdata/bookstack/db:/config
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      MYSQL_ROOT_PASSWORD: ${BOOKSTACK_DB_ROOT_PASSWORD:-changeme123}
+      MYSQL_DATABASE: bookstack
+      MYSQL_USER: bookstack
+      MYSQL_PASSWORD: ${BOOKSTACK_DB_PASSWORD:-changeme123}

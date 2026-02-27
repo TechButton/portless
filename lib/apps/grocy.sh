@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Grocy
+APP_NAME="grocy"
+APP_DESCRIPTION="Household management for groceries, inventory, recipes, chores, and tasks"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="GROCY_PORT"
+APP_DEFAULT_HOST_PORT="9283"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="grocy"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="lscr.io/linuxserver/grocy:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/grocy.yml"
+APP_APPDATA_DIR="appdata/grocy"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Grocy has built-in authentication. Default login: admin / admin — change on first login. Works with barcode scanners and companion mobile apps."

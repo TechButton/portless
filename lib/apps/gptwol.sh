@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: GPTWOL
+APP_NAME="gptwol"
+APP_DESCRIPTION="Wake on LAN web UI — wake and sleep remote machines on your local network from a browser"
+APP_CATEGORY="network"
+APP_PORT_VAR="GPTWOL_PORT"
+APP_DEFAULT_HOST_PORT="5000"
+APP_SERVICE_PORT="5000"
+APP_DEFAULT_SUBDOMAIN="wol"
+APP_AUTH="none"
+APP_PROFILES="network,all"
+APP_IMAGE="misterbabou/gptwol:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/gptwol.yml"
+APP_APPDATA_DIR="appdata/gptwol"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="GPTWOL requires network_mode: host to send magic packets on the LAN. Supports Wake on LAN, Sleep on LAN, ARP scanning, cron-based scheduling, and optional OIDC auth. Store machine configs in appdata/gptwol."

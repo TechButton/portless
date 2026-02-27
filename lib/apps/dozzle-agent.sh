@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Dozzle Agent
+APP_NAME="dozzle-agent"
+APP_DESCRIPTION="Remote Dozzle agent for aggregating Docker logs from multiple hosts into a central Dozzle instance"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="DOZZLE_AGENT_PORT"
+APP_DEFAULT_HOST_PORT="7007"
+APP_SERVICE_PORT="7007"
+APP_DEFAULT_SUBDOMAIN=""
+APP_AUTH="none"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="amir20/dozzle:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/dozzle-agent.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="Dozzle Agent runs on remote hosts and forwards container logs to a central Dozzle instance. Uses the same image as Dozzle but runs with the 'agent' subcommand. Connect from Dozzle with DOZZLE_REMOTE_AGENT=agent-host:7007. Communication is secured with TLS."

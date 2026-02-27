@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Pi-hole
+APP_NAME="pihole"
+APP_DESCRIPTION="Network-wide ad and tracker blocker — DNS sinkhole with a web management interface"
+APP_CATEGORY="network"
+APP_PORT_VAR="PIHOLE_PORT"
+APP_DEFAULT_HOST_PORT="8355"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="pihole"
+APP_AUTH="none"
+APP_PROFILES="network,all"
+APP_IMAGE="pihole/pihole:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/pihole.yml"
+APP_APPDATA_DIR="appdata/pihole"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Pi-hole has built-in authentication. Also binds host port 53 (DNS) — ensure no other DNS service is running on the host. Set WEBPASSWORD env var for the admin panel password. Configure your router's DHCP to use the Pi-hole IP as DNS."

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: WG-Easy
+APP_NAME="wg-easy"
+APP_DESCRIPTION="WireGuard VPN server with a web UI for managing clients — the easiest WireGuard setup"
+APP_CATEGORY="network"
+APP_PORT_VAR="WG_EASY_PORT"
+APP_DEFAULT_HOST_PORT="51821"
+APP_SERVICE_PORT="51821"
+APP_DEFAULT_SUBDOMAIN="vpn"
+APP_AUTH="none"
+APP_PROFILES="network,all"
+APP_IMAGE="ghcr.io/wg-easy/wg-easy:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/wg-easy.yml"
+APP_APPDATA_DIR="appdata/wg-easy"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="WG-Easy has built-in password authentication. Also requires UDP port 51820 for WireGuard traffic. Set WG_HOST to your server's public IP or domain. Requires NET_ADMIN and SYS_MODULE capabilities. Generates QR codes for easy client setup."

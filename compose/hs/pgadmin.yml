@@ -1,0 +1,22 @@
+services:
+  # pgAdmin 4 - PostgreSQL Management UI
+  # https://github.com/pgadmin-org/pgadmin4
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["database", "all"]
+    networks:
+      - default
+    ports:
+      - "$PGADMIN_PORT:80"
+    volumes:
+      - $DOCKERDIR/appdata/pgadmin:/var/lib/pgadmin
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@homelab.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-changeme123}
+    # DOCKER-LABELS-PLACEHOLDER

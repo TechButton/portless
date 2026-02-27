@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Komga
+APP_NAME="komga"
+APP_DESCRIPTION="Comic book, manga, and webtoon server with a clean web reader and OPDS support"
+APP_CATEGORY="media"
+APP_PORT_VAR="KOMGA_PORT"
+APP_DEFAULT_HOST_PORT="8315"
+APP_SERVICE_PORT="25600"
+APP_DEFAULT_SUBDOMAIN="comics"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="gotson/komga:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/komga.yml"
+APP_APPDATA_DIR="appdata/komga"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Komga has built-in authentication. Mount your comics/manga library in the container volumes and add it as a library through the web UI. Supports OPDS for e-reader apps."

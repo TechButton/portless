@@ -1,0 +1,23 @@
+services:
+  # Change Detection - Website Monitoring
+  # https://github.com/dgtlmoon/changedetection.io
+  changedetection:
+    image: ghcr.io/dgtlmoon/changedetection.io:latest
+    container_name: changedetection
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["management", "all"]
+    networks:
+      - default
+    ports:
+      - "$CHANGEDETECTION_PORT:5000"
+    volumes:
+      - $DOCKERDIR/appdata/changedetection:/datastore
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      BASE_URL: "https://changes.${DOMAINNAME_1}"
+    # DOCKER-LABELS-PLACEHOLDER

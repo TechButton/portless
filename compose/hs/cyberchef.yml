@@ -1,0 +1,19 @@
+services:
+  # CyberChef - Data Analysis and Encryption Tool
+  # https://github.com/gchq/CyberChef
+  cyberchef:
+    image: mpepping/cyberchef:latest
+    container_name: cyberchef
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["development", "all"]
+    networks:
+      - default
+    ports:
+      - "$CYBERCHEF_PORT:8000"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

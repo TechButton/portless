@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Wallos
+APP_NAME="wallos"
+APP_DESCRIPTION="Self-hosted subscription and expense tracker — monitor recurring payments and budgets"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="WALLOS_PORT"
+APP_DEFAULT_HOST_PORT="8363"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="wallos"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="bellamy/wallos:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/wallos.yml"
+APP_APPDATA_DIR="appdata/wallos"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Wallos has built-in authentication. Uses SQLite — no external database needed. Mount appdata/wallos/db for the database and appdata/wallos/logos for currency/service logos. Track subscriptions, set budgets, and get renewal reminders."

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Resilio Sync
+APP_NAME="resilio-sync"
+APP_DESCRIPTION="Peer-to-peer file synchronization — sync folders between devices without a central server"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="RESILIO_PORT"
+APP_DEFAULT_HOST_PORT="8888"
+APP_SERVICE_PORT="8888"
+APP_DEFAULT_SUBDOMAIN="sync"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="lscr.io/linuxserver/resilio-sync:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/resilio-sync.yml"
+APP_APPDATA_DIR="appdata/resilio-sync"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Resilio Sync has built-in authentication set on first launch. Uses BitTorrent protocol for P2P sync — no cloud required. Also requires port 55555 (sync data transfer). NOTE: The free version is limited; Pro license needed for some features."

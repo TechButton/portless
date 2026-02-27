@@ -1,0 +1,19 @@
+services:
+  # ESPHome - ESP Device Firmware Builder
+  # https://github.com/esphome/esphome
+  esphome:
+    image: ghcr.io/esphome/esphome:latest
+    container_name: esphome
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["automation", "all"]
+    network_mode: host
+    volumes:
+      - $DOCKERDIR/appdata/esphome:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      ESPHOME_DASHBOARD_USE_PING: "true"
+    # Note: network_mode host required for mDNS/Bonjour ESP device discovery
+    # DOCKER-LABELS-PLACEHOLDER

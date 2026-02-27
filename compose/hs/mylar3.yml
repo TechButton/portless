@@ -1,0 +1,25 @@
+services:
+  # Mylar3 - Comic Book Downloader
+  # https://github.com/mylar3/mylar3
+  mylar3:
+    image: lscr.io/linuxserver/mylar3:latest
+    container_name: mylar3
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["arr", "all"]
+    networks:
+      - default
+    ports:
+      - "$MYLAR3_PORT:8090"
+    volumes:
+      - $DOCKERDIR/appdata/mylar3:/config
+      # Map your comics library:
+      # - /path/to/comics:/comics
+      # - /path/to/downloads:/downloads
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER

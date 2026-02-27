@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: MariaDB
+APP_NAME="mariadb"
+APP_DESCRIPTION="MariaDB relational database — required by Bookstack, Nextcloud, and many other apps"
+APP_CATEGORY="database"
+APP_PORT_VAR="MARIADB_PORT"
+APP_DEFAULT_HOST_PORT="3307"
+APP_SERVICE_PORT="3306"
+APP_DEFAULT_SUBDOMAIN=""
+APP_AUTH="none"
+APP_PROFILES="database,all"
+APP_IMAGE="lscr.io/linuxserver/mariadb:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/mariadb.yml"
+APP_APPDATA_DIR="appdata/mariadb"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="No web UI. Shared database instance used by apps like Bookstack, Nextcloud, Piwigo. Set MYSQL_ROOT_PASSWORD and create per-app databases in MYSQL_DATABASE. The host port 3307 avoids conflict with any local MySQL on the host."

@@ -1,0 +1,26 @@
+services:
+  # MariaDB - Relational Database
+  # https://github.com/linuxserver/docker-mariadb
+  mariadb:
+    image: lscr.io/linuxserver/mariadb:latest
+    container_name: mariadb
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["database", "all"]
+    networks:
+      - default
+    ports:
+      - "$MARIADB_PORT:3306"
+    volumes:
+      - $DOCKERDIR/appdata/mariadb:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-homelab}
+      MYSQL_USER: ${MYSQL_USER:-homelab}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme123}
+    # DOCKER-LABELS-PLACEHOLDER

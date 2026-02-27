@@ -1,0 +1,29 @@
+services:
+  # Transmission - BitTorrent Client
+  # https://github.com/transmission/transmission
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    container_name: transmission
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["downloads", "all"]
+    networks:
+      - default
+    ports:
+      - "$TRANSMISSION_PORT:9091"
+      - "51413:51413"
+      - "51413:51413/udp"
+    volumes:
+      - $DOCKERDIR/appdata/transmission:/config
+      # Map your downloads directory:
+      # - /path/to/downloads:/downloads
+      # - /path/to/watch:/watch
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      USER: ${TRANSMISSION_USER:-admin}
+      PASS: ${TRANSMISSION_PASS:-changeme}
+    # DOCKER-LABELS-PLACEHOLDER

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: cAdvisor
+APP_NAME="cadvisor"
+APP_DESCRIPTION="Container resource usage and performance monitoring — exposes metrics to Prometheus"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="CADVISOR_PORT"
+APP_DEFAULT_HOST_PORT="8302"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="cadvisor"
+APP_AUTH="tinyauth"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="gcr.io/cadvisor/cadvisor:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/cadvisor.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="cAdvisor has no built-in auth — TinyAuth recommended. Scrape metrics at /metrics for Prometheus. Needs Docker socket and privileged access to read cgroup data."

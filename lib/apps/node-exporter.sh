@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Node Exporter
+APP_NAME="node-exporter"
+APP_DESCRIPTION="Prometheus exporter for host system metrics — CPU, memory, disk, network"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="NODE_EXPORTER_PORT"
+APP_DEFAULT_HOST_PORT="9100"
+APP_SERVICE_PORT="9100"
+APP_DEFAULT_SUBDOMAIN="node-exporter"
+APP_AUTH="tinyauth"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="prom/node-exporter:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/node-exporter.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="Node Exporter exposes host metrics to Prometheus. Runs with host PID and network namespaces for accurate readings. Add as a Prometheus scrape target at http://node-exporter:9100/metrics."

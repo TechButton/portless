@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Calibre
+APP_NAME="calibre"
+APP_DESCRIPTION="Full Calibre e-book management suite with KasmVNC web desktop and content server"
+APP_CATEGORY="media"
+APP_PORT_VAR="CALIBRE_PORT"
+APP_DEFAULT_HOST_PORT="8303"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="calibre"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="lscr.io/linuxserver/calibre:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/calibre.yml"
+APP_APPDATA_DIR="appdata/calibre"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Calibre runs as a full desktop via KasmVNC (web browser). Also exposes the Calibre Content Server on port 8081 for e-reader clients. Mount your Calibre library to /config/Calibre Library. Calibre-Web can use this same library."

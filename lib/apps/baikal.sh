@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Baikal
+APP_NAME="baikal"
+APP_DESCRIPTION="Lightweight CalDAV and CardDAV server — sync calendars and contacts across all your devices"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="BAIKAL_PORT"
+APP_DEFAULT_HOST_PORT="5232"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="dav"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="ckulka/baikal:nginx"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/baikal.yml"
+APP_APPDATA_DIR="appdata/baikal"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Baikal has built-in authentication. Complete setup at /admin on first launch. Compatible with Apple Calendar, Thunderbird, DAVx5 (Android), and any standard CalDAV/CardDAV client."

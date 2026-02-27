@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: DweebUI
+APP_NAME="dweebui"
+APP_DESCRIPTION="Docker container management web UI with a real-time dashboard and multi-user permissions"
+APP_CATEGORY="management"
+APP_PORT_VAR="DWEEBUI_PORT"
+APP_DEFAULT_HOST_PORT="8346"
+APP_SERVICE_PORT="8000"
+APP_DEFAULT_SUBDOMAIN="docker"
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="lllllllillllllillll/dweebui:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/dweebui.yml"
+APP_APPDATA_DIR="appdata/dweebui"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="DweebUI has built-in multi-user authentication. Requires Docker socket access. Set the SECRET env var for session security. Do not expose directly to the internet — it provides full Docker management capabilities."

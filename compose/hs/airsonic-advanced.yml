@@ -1,0 +1,25 @@
+services:
+  # Airsonic-Advanced - Music Streaming Server
+  # https://github.com/airsonic-advanced/airsonic-advanced
+  airsonic-advanced:
+    image: ghcr.io/airsonic-advanced/airsonic-advanced:latest
+    container_name: airsonic-advanced
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    ports:
+      - "$AIRSONIC_PORT:4040"
+    volumes:
+      - $DOCKERDIR/appdata/airsonic-advanced:/var/airsonic
+      # Map your music library:
+      # - /path/to/music:/var/music:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    # DOCKER-LABELS-PLACEHOLDER

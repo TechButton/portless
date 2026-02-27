@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: CyberChef
+APP_NAME="cyberchef"
+APP_DESCRIPTION="Web app for encryption, encoding, compression, and data analysis — the 'Swiss army knife' for data"
+APP_CATEGORY="development"
+APP_PORT_VAR="CYBERCHEF_PORT"
+APP_DEFAULT_HOST_PORT="8344"
+APP_SERVICE_PORT="8000"
+APP_DEFAULT_SUBDOMAIN="cyberchef"
+APP_AUTH="tinyauth"
+APP_PROFILES="development,all"
+APP_IMAGE="mpepping/cyberchef:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/cyberchef.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="CyberChef is a fully static web app — all processing happens in the browser. No auth built in — TinyAuth recommended if exposed publicly. Supports 300+ operations: hashing, encoding, encryption, parsing, and more."

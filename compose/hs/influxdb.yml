@@ -1,0 +1,25 @@
+services:
+  # InfluxDB - Time-Series Database
+  # https://github.com/influxdata/influxdb
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["database", "all"]
+    networks:
+      - default
+    ports:
+      - "$INFLUXDB_PORT:8086"
+    volumes:
+      - $DOCKERDIR/appdata/influxdb:/var/lib/influxdb2
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_ADMIN_USER:-admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_ADMIN_PASSWORD:-changeme123}
+      DOCKER_INFLUXDB_INIT_ORG: ${INFLUXDB_ORG:-homelab}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${INFLUXDB_BUCKET:-homelab}
+    # DOCKER-LABELS-PLACEHOLDER

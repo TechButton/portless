@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: WikiDocs
+APP_NAME="wikidocs"
+APP_DESCRIPTION="Flat-file Markdown wiki — no database required, simple and fast"
+APP_CATEGORY="documents"
+APP_PORT_VAR="WIKIDOCS_PORT"
+APP_DEFAULT_HOST_PORT="8365"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="wiki"
+APP_AUTH="tinyauth"
+APP_PROFILES="documents,all"
+APP_IMAGE="zavy86/wikidocs:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/wikidocs.yml"
+APP_APPDATA_DIR="appdata/wikidocs"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="WikiDocs stores everything in Markdown flat files — no database needed. Has no built-in auth — TinyAuth recommended. Mount appdata/wikidocs to /datasets. Lighter than DokuWiki and similar in concept to Obsidian Publish."

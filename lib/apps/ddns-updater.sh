@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: DDNS Updater
+APP_NAME="ddns-updater"
+APP_DESCRIPTION="Dynamic DNS updater supporting Cloudflare, GoDaddy, Namecheap, DuckDNS, and many more providers"
+APP_CATEGORY="network"
+APP_PORT_VAR="DDNS_UPDATER_PORT"
+APP_DEFAULT_HOST_PORT="8345"
+APP_SERVICE_PORT="8000"
+APP_DEFAULT_SUBDOMAIN="ddns"
+APP_AUTH="none"
+APP_PROFILES="network,all"
+APP_IMAGE="qmcgaw/ddns-updater:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/ddns-updater.yml"
+APP_APPDATA_DIR="appdata/ddns-updater"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="DDNS Updater is configured via appdata/ddns-updater/config.json. Supports 30+ DNS providers. Has a simple web UI for status. NOTE: If you're using Cloudflare Tunnel, you likely don't need this."

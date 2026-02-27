@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Scrutiny
+APP_NAME="scrutiny"
+APP_DESCRIPTION="Hard drive SMART monitoring dashboard with historical data and failure prediction"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="SCRUTINY_PORT"
+APP_DEFAULT_HOST_PORT="8357"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="scrutiny"
+APP_AUTH="none"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="ghcr.io/analogj/scrutiny:master-omnibus"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/scrutiny.yml"
+APP_APPDATA_DIR="appdata/scrutiny"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Scrutiny (omnibus) includes the web UI, collector, and InfluxDB in one container. Requires SYS_RAWIO capability and /run/udev:/run/udev:ro volume. Add each disk with --device /dev/sdX. Add SYS_ADMIN capability for NVMe drives. No built-in auth — use TinyAuth if exposing publicly."

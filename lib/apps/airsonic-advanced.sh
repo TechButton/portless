@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Airsonic-Advanced
+APP_NAME="airsonic-advanced"
+APP_DESCRIPTION="Feature-rich music streaming server — Subsonic-compatible with FLAC support and transcoding"
+APP_CATEGORY="media"
+APP_PORT_VAR="AIRSONIC_PORT"
+APP_DEFAULT_HOST_PORT="4040"
+APP_SERVICE_PORT="4040"
+APP_DEFAULT_SUBDOMAIN="music"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="ghcr.io/airsonic-advanced/airsonic-advanced:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/airsonic-advanced.yml"
+APP_APPDATA_DIR="appdata/airsonic-advanced"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Airsonic-Advanced has built-in authentication. Default login: admin / admin — change immediately. Supports Subsonic API clients (DSub, Symfonium, Ultrasonic)."

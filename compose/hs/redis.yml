@@ -1,0 +1,21 @@
+services:
+  # Redis - In-Memory Data Store
+  # https://github.com/redis/redis
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["database", "all"]
+    networks:
+      - default
+    ports:
+      - "$REDIS_PORT:6379"
+    volumes:
+      - $DOCKERDIR/appdata/redis:/data
+      - /etc/localtime:/etc/localtime:ro
+    command: redis-server --save 60 1 --loglevel warning
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

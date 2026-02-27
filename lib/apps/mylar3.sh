@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Mylar3
+APP_NAME="mylar3"
+APP_DESCRIPTION="Automated comic book downloader and manager — the Sonarr/Radarr equivalent for comics"
+APP_CATEGORY="arr"
+APP_PORT_VAR="MYLAR3_PORT"
+APP_DEFAULT_HOST_PORT="8291"
+APP_SERVICE_PORT="8090"
+APP_DEFAULT_SUBDOMAIN="comics"
+APP_AUTH="none"
+APP_PROFILES="arr,all"
+APP_IMAGE="lscr.io/linuxserver/mylar3:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/mylar3.yml"
+APP_APPDATA_DIR="appdata/mylar3"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Mylar3 has built-in authentication. Pairs with Jackett or Prowlarr for indexer support. Mount your comics library path to /comics."

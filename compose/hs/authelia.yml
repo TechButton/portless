@@ -1,0 +1,20 @@
+services:
+  # Authelia - SSO and 2FA Authentication Proxy
+  # https://github.com/authelia/authelia
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["security", "all"]
+    networks:
+      - default
+    ports:
+      - "$AUTHELIA_PORT:9091"
+    volumes:
+      - $DOCKERDIR/appdata/authelia:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Open WebUI
+APP_NAME="open-webui"
+APP_DESCRIPTION="ChatGPT-style web interface for Ollama and OpenAI-compatible LLM APIs"
+APP_CATEGORY="ai"
+APP_PORT_VAR="OPEN_WEBUI_PORT"
+APP_DEFAULT_HOST_PORT="8353"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="chat"
+APP_AUTH="none"
+APP_PROFILES="ai,all"
+APP_IMAGE="ghcr.io/open-webui/open-webui:main"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/open-webui.yml"
+APP_APPDATA_DIR="appdata/open-webui"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Open WebUI has built-in multi-user authentication. Set OLLAMA_BASE_URL=http://ollama:11434 to connect to a local Ollama instance. Also supports OpenAI and any OpenAI-compatible API. Includes image generation, RAG, and web search integrations."

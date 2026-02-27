@@ -1,0 +1,21 @@
+services:
+  # Trilium Next - Hierarchical Note-Taking
+  # https://github.com/TriliumNext/Notes
+  trilium:
+    image: triliumnext/notes:latest
+    container_name: trilium
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    ports:
+      - "$TRILIUM_PORT:8080"
+    volumes:
+      - $DOCKERDIR/appdata/trilium:/home/node/trilium-data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      TRILIUM_DATA_DIR: /home/node/trilium-data
+    # DOCKER-LABELS-PLACEHOLDER

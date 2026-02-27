@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Jackett
+APP_NAME="jackett"
+APP_DESCRIPTION="Indexer proxy for torrent trackers — older alternative to Prowlarr for the *arr stack"
+APP_CATEGORY="arr"
+APP_PORT_VAR="JACKETT_PORT"
+APP_DEFAULT_HOST_PORT="9117"
+APP_SERVICE_PORT="9117"
+APP_DEFAULT_SUBDOMAIN="jackett"
+APP_AUTH="none"
+APP_PROFILES="arr,all"
+APP_IMAGE="lscr.io/linuxserver/jackett:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/jackett.yml"
+APP_APPDATA_DIR="appdata/jackett"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Jackett has built-in API key authentication. NOTE: Prowlarr is recommended over Jackett for new installs — it integrates directly with Radarr/Sonarr without manual Jackett URLs."

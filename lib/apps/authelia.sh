@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Authelia
+APP_NAME="authelia"
+APP_DESCRIPTION="Lightweight SSO and two-factor authentication proxy — alternative to Authentik for simpler setups"
+APP_CATEGORY="security"
+APP_PORT_VAR="AUTHELIA_PORT"
+APP_DEFAULT_HOST_PORT="8341"
+APP_SERVICE_PORT="9091"
+APP_DEFAULT_SUBDOMAIN="auth"
+APP_AUTH="none"
+APP_PROFILES="security,all"
+APP_IMAGE="authelia/authelia:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/authelia.yml"
+APP_APPDATA_DIR="appdata/authelia"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Authelia is configured via a YAML file (appdata/authelia/configuration.yml). Supports TOTP, WebAuthn, and push notifications. Integrates directly with Traefik as a forward auth middleware — works alongside TinyAuth. NOTE: If using TinyAuth, Authelia may be redundant."

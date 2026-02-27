@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: ESPHome
+APP_NAME="esphome"
+APP_DESCRIPTION="Firmware builder and OTA flasher for ESP8266/ESP32 devices — integrates with Home Assistant"
+APP_CATEGORY="automation"
+APP_PORT_VAR="ESPHOME_PORT"
+APP_DEFAULT_HOST_PORT="6052"
+APP_SERVICE_PORT="6052"
+APP_DEFAULT_SUBDOMAIN="esphome"
+APP_AUTH="none"
+APP_PROFILES="automation,all"
+APP_IMAGE="ghcr.io/esphome/esphome:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/esphome.yml"
+APP_APPDATA_DIR="appdata/esphome"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="ESPHome has optional dashboard password protection. Store your device YAML configs in appdata/esphome. Requires host network mode or mDNS passthrough to discover ESP devices on the LAN. Pairs natively with Home Assistant."

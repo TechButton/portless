@@ -1,0 +1,22 @@
+services:
+  # The Lounge - Self-Hosted IRC Client
+  # https://github.com/thelounge/thelounge
+  thelounge:
+    image: ghcr.io/thelounge/thelounge:latest
+    container_name: thelounge
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["network", "all"]
+    networks:
+      - default
+    ports:
+      - "$THELOUNGE_PORT:9000"
+    volumes:
+      - $DOCKERDIR/appdata/thelounge:/var/opt/thelounge
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER

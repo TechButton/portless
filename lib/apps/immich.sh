@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Immich
+APP_NAME="immich"
+APP_DESCRIPTION="Self-hosted photo and video backup — Google Photos alternative with facial recognition and AI tagging"
+APP_CATEGORY="media"
+APP_PORT_VAR="IMMICH_PORT"
+APP_DEFAULT_HOST_PORT="2283"
+APP_SERVICE_PORT="2283"
+APP_DEFAULT_SUBDOMAIN="photos"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="ghcr.io/immich-app/immich-server:release"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/immich.yml"
+APP_APPDATA_DIR="appdata/immich"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Immich has built-in authentication. Compose includes PostgreSQL with pgvecto.rs extension and Redis (both required). Mount your photos library to /usr/src/app/upload. Mobile apps available for iOS and Android for automatic backup."

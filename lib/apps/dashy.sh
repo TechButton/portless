@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Dashy
+APP_NAME="dashy"
+APP_DESCRIPTION="Feature-rich self-hosted personal dashboard with status checks, widgets, and icon packs"
+APP_CATEGORY="dashboard"
+APP_PORT_VAR="DASHY_PORT"
+APP_DEFAULT_HOST_PORT="4001"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="home"
+APP_AUTH="tinyauth"
+APP_PROFILES="dashboard,all"
+APP_IMAGE="lissy93/dashy:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/dashy.yml"
+APP_APPDATA_DIR="appdata/dashy"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Dashy is configured via a YAML file (appdata/dashy/conf.yml). Has optional built-in auth — TinyAuth is simpler if you're already using it. Extensive icon and widget support."

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Ombi
+APP_NAME="ombi"
+APP_DESCRIPTION="Media request management for Plex, Emby, and Jellyfin — older alternative to Overseerr"
+APP_CATEGORY="requests"
+APP_PORT_VAR="OMBI_PORT"
+APP_DEFAULT_HOST_PORT="3579"
+APP_SERVICE_PORT="3579"
+APP_DEFAULT_SUBDOMAIN="requests"
+APP_AUTH="none"
+APP_PROFILES="requests,all"
+APP_IMAGE="lscr.io/linuxserver/ombi:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/ombi.yml"
+APP_APPDATA_DIR="appdata/ombi"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Ombi has built-in authentication. NOTE: Ombi is in maintenance mode — Overseerr (for Plex) or Jellyseerr (for Jellyfin) are recommended for new installs."

@@ -1,0 +1,22 @@
+services:
+  # Ombi - Media Request Management
+  # https://github.com/Ombi-app/Ombi
+  ombi:
+    image: lscr.io/linuxserver/ombi:latest
+    container_name: ombi
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["requests", "all"]
+    networks:
+      - default
+    ports:
+      - "$OMBI_PORT:3579"
+    volumes:
+      - $DOCKERDIR/appdata/ombi:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER

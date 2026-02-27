@@ -1,0 +1,25 @@
+services:
+  # DDNS Updater - Dynamic DNS Client
+  # https://github.com/qdm12/ddns-updater
+  ddns-updater:
+    image: qmcgaw/ddns-updater:latest
+    container_name: ddns-updater
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["network", "all"]
+    networks:
+      - default
+    ports:
+      - "$DDNS_UPDATER_PORT:8000"
+    volumes:
+      - $DOCKERDIR/appdata/ddns-updater:/updater/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      PERIOD: 5m
+      HTTP_TIMEOUT: 10s
+      BACKUP_PERIOD: 24h
+    # DOCKER-LABELS-PLACEHOLDER

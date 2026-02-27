@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: PostgreSQL
+APP_NAME="postgresql"
+APP_DESCRIPTION="PostgreSQL relational database — required by Authentik, Immich, Paperless-NGX, and others"
+APP_CATEGORY="database"
+APP_PORT_VAR="POSTGRES_PORT"
+APP_DEFAULT_HOST_PORT="5432"
+APP_SERVICE_PORT="5432"
+APP_DEFAULT_SUBDOMAIN=""
+APP_AUTH="none"
+APP_PROFILES="database,all"
+APP_IMAGE="postgres:16-alpine"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/postgresql.yml"
+APP_APPDATA_DIR="appdata/postgresql"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="No web UI. Shared database instance. Set POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB env vars. Use PgAdmin for a web-based management interface."

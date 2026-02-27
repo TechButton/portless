@@ -1,0 +1,20 @@
+services:
+  # Huntarr - Missing Content Hunter for Arr Stack
+  # https://github.com/plexguide/Huntarr.io
+  huntarr:
+    image: huntarr/huntarr:latest
+    container_name: huntarr
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["arr", "all"]
+    networks:
+      - default
+    ports:
+      - "$HUNTARR_PORT:9705"
+    volumes:
+      - $DOCKERDIR/appdata/huntarr:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

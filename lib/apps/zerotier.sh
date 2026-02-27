@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: ZeroTier
+APP_NAME="zerotier"
+APP_DESCRIPTION="Software-defined networking — create a virtual LAN connecting devices across the internet"
+APP_CATEGORY="network"
+APP_PORT_VAR=""
+APP_DEFAULT_HOST_PORT=""
+APP_SERVICE_PORT=""
+APP_DEFAULT_SUBDOMAIN=""
+APP_AUTH="none"
+APP_PROFILES="network,all"
+APP_IMAGE="zerotier/zerotier:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/zerotier.yml"
+APP_APPDATA_DIR="appdata/zerotier"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="ZeroTier runs as a network daemon — no web UI. Uses network_mode: host and requires NET_ADMIN capability plus /dev/net/tun device. Join networks with 'docker exec zerotier zerotier-cli join <network-id>'. Managed via my.zerotier.com or a self-hosted ZeroTier controller."

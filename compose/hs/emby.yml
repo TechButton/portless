@@ -1,0 +1,25 @@
+services:
+  # Emby - Media Server
+  # https://github.com/MediaBrowser/Emby
+  emby:
+    image: lscr.io/linuxserver/emby:latest
+    container_name: emby
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    ports:
+      - "$EMBY_PORT:8096"
+    volumes:
+      - $DOCKERDIR/appdata/emby:/config
+      # Map your media library paths:
+      # - /path/to/movies:/movies:ro
+      # - /path/to/tvshows:/tvshows:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER

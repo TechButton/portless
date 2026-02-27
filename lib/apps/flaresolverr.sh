@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: FlareSolverr
+APP_NAME="flaresolverr"
+APP_DESCRIPTION="Proxy server to bypass Cloudflare and DDoS-Guard protection for Prowlarr/Jackett indexers"
+APP_CATEGORY="arr"
+APP_PORT_VAR="FLARESOLVERR_PORT"
+APP_DEFAULT_HOST_PORT="8191"
+APP_SERVICE_PORT="8191"
+APP_DEFAULT_SUBDOMAIN="flaresolverr"
+APP_AUTH="tinyauth"
+APP_PROFILES="arr,all"
+APP_IMAGE="ghcr.io/flaresolverr/flaresolverr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/flaresolverr.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="Add FlareSolverr as a proxy in Prowlarr under Settings → Indexers → Add Proxy. URL: http://flaresolverr:8191. Only needed if your indexers are protected by Cloudflare."

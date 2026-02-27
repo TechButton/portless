@@ -1,0 +1,21 @@
+services:
+  # Cloud Commander - Web File Manager
+  # https://github.com/coderaiser/cloudcmd
+  cloud-commander:
+    image: coderaiser/cloudcmd:latest
+    container_name: cloud-commander
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["management", "all"]
+    networks:
+      - default
+    ports:
+      - "$CLOUD_COMMANDER_PORT:8000"
+    volumes:
+      - /:/fs/root:ro
+      - $DOCKERDIR:/fs/dockerdir
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

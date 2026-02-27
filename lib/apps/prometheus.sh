@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Prometheus
+APP_NAME="prometheus"
+APP_DESCRIPTION="Time-series metrics collection and alerting — the standard data source for Grafana"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="PROMETHEUS_PORT"
+APP_DEFAULT_HOST_PORT="9093"
+APP_SERVICE_PORT="9090"
+APP_DEFAULT_SUBDOMAIN="prometheus"
+APP_AUTH="tinyauth"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="prom/prometheus:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/prometheus.yml"
+APP_APPDATA_DIR="appdata/prometheus"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Prometheus has no built-in auth — TinyAuth is strongly recommended. Add scrape targets in appdata/prometheus/prometheus.yml. Pairs well with Node Exporter and Grafana."

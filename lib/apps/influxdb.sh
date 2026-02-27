@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: InfluxDB
+APP_NAME="influxdb"
+APP_DESCRIPTION="High-performance time-series database — commonly used with Telegraf, Grafana, and IoT data"
+APP_CATEGORY="database"
+APP_PORT_VAR="INFLUXDB_PORT"
+APP_DEFAULT_HOST_PORT="8086"
+APP_SERVICE_PORT="8086"
+APP_DEFAULT_SUBDOMAIN="influxdb"
+APP_AUTH="none"
+APP_PROFILES="database,all"
+APP_IMAGE="influxdb:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/influxdb.yml"
+APP_APPDATA_DIR="appdata/influxdb"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="InfluxDB 2.x has built-in authentication and a web UI. Set DOCKER_INFLUXDB_INIT_USERNAME, INIT_PASSWORD, INIT_ORG, INIT_BUCKET env vars for first-run setup."

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: GameVault
+APP_NAME="gamevault"
+APP_DESCRIPTION="Self-hosted game library and launcher — browse, download, and track games from your own server"
+APP_CATEGORY="media"
+APP_PORT_VAR="GAMEVAULT_PORT"
+APP_DEFAULT_HOST_PORT="8348"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="games"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="ghcr.io/phalcode/gamevault-backend:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/gamevault.yml"
+APP_APPDATA_DIR="appdata/gamevault"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="GameVault has built-in authentication. Requires PostgreSQL (included in compose). Mount your games directory to /files and media cache to /media. NOTE: Licensed under CC BY-NC-SA 4.0 — not fully open source, commercial use restricted. Companion desktop client at https://github.com/Phalcode/gamevault-app."

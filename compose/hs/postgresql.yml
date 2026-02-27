@@ -1,0 +1,23 @@
+services:
+  # PostgreSQL - Relational Database
+  # https://github.com/docker-library/postgres
+  postgresql:
+    image: postgres:16-alpine
+    container_name: postgresql
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["database", "all"]
+    networks:
+      - default
+    ports:
+      - "$POSTGRES_PORT:5432"
+    volumes:
+      - $DOCKERDIR/appdata/postgresql:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      POSTGRES_USER: ${POSTGRES_USER:-homelab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme123}
+      POSTGRES_DB: ${POSTGRES_DB:-homelab}
+    # DOCKER-LABELS-PLACEHOLDER

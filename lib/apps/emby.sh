@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Emby
+APP_NAME="emby"
+APP_DESCRIPTION="Self-hosted media server — alternative to Plex with a similar feature set"
+APP_CATEGORY="media"
+APP_PORT_VAR="EMBY_PORT"
+APP_DEFAULT_HOST_PORT="8310"
+APP_SERVICE_PORT="8096"
+APP_DEFAULT_SUBDOMAIN="emby"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="lscr.io/linuxserver/emby:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/emby.yml"
+APP_APPDATA_DIR="appdata/emby"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Emby has built-in authentication. Mount your media library paths in the compose volumes and configure libraries through the web UI."

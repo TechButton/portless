@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Watchtower
+APP_NAME="watchtower"
+APP_DESCRIPTION="Automatic Docker container image updater — keeps your containers up to date without manual pulls"
+APP_CATEGORY="management"
+APP_PORT_VAR=""
+APP_DEFAULT_HOST_PORT=""
+APP_SERVICE_PORT=""
+APP_DEFAULT_SUBDOMAIN=""
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="containrrr/watchtower:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/watchtower.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="Watchtower has no web UI — it runs as a background daemon. By default it updates all containers; add com.centurylinklabs.watchtower.enable=true labels to opt-in instead. Schedule via WATCHTOWER_SCHEDULE cron expression. Sends notifications via email, Slack, or Gotify."

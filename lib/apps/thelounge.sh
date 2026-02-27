@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: The Lounge
+APP_NAME="thelounge"
+APP_DESCRIPTION="Self-hosted IRC client — always-on, with push notifications and a modern web interface"
+APP_CATEGORY="network"
+APP_PORT_VAR="THELOUNGE_PORT"
+APP_DEFAULT_HOST_PORT="8361"
+APP_SERVICE_PORT="9000"
+APP_DEFAULT_SUBDOMAIN="irc"
+APP_AUTH="none"
+APP_PROFILES="network,all"
+APP_IMAGE="ghcr.io/thelounge/thelounge:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/thelounge.yml"
+APP_APPDATA_DIR="appdata/thelounge"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="The Lounge has built-in user management. Add users with 'docker exec -it thelounge thelounge add <username>'. Stays connected to IRC servers 24/7 and logs messages while you're away."

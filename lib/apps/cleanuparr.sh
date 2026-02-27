@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Cleanuparr
+APP_NAME="cleanuparr"
+APP_DESCRIPTION="Automated cleanup tool for Sonarr, Radarr, and download clients — removes stalled and unwanted items"
+APP_CATEGORY="arr"
+APP_PORT_VAR="CLEANUPARR_PORT"
+APP_DEFAULT_HOST_PORT="8343"
+APP_SERVICE_PORT="11011"
+APP_DEFAULT_SUBDOMAIN="cleanuparr"
+APP_AUTH="none"
+APP_PROFILES="arr,all"
+APP_IMAGE="ghcr.io/cleanuparr/cleanuparr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/cleanuparr.yml"
+APP_APPDATA_DIR="appdata/cleanuparr"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Cleanuparr has built-in authentication. Connects to Sonarr, Radarr, Lidarr, and download clients (qBittorrent, Deluge, Transmission) via their APIs. Automatically removes stalled downloads, failed items, and unmonitored content."

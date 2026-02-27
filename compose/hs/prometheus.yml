@@ -1,0 +1,29 @@
+services:
+  # Prometheus - Time-Series Metrics Collection
+  # https://github.com/prometheus/prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["monitoring", "all"]
+    networks:
+      - default
+    ports:
+      - "$PROMETHEUS_PORT:9090"
+    volumes:
+      - $DOCKERDIR/appdata/prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+      - /etc/localtime:/etc/localtime:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER
+
+volumes:
+  prometheus-data:

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: BookStack
+APP_NAME="bookstack"
+APP_DESCRIPTION="Structured wiki platform using a book/chapter/page hierarchy — approachable and full-featured"
+APP_CATEGORY="documents"
+APP_PORT_VAR="BOOKSTACK_PORT"
+APP_DEFAULT_HOST_PORT="6875"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="wiki"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="lscr.io/linuxserver/bookstack:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/bookstack.yml"
+APP_APPDATA_DIR="appdata/bookstack"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="BookStack requires MariaDB — the compose file includes a companion MariaDB container. Has built-in authentication with LDAP/SAML/OIDC options. Default login: admin@admin.com / password"

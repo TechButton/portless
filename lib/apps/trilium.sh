@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Trilium Next
+APP_NAME="trilium"
+APP_DESCRIPTION="Hierarchical note-taking app with rich text, code blocks, relation maps, and scripting"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="TRILIUM_PORT"
+APP_DEFAULT_HOST_PORT="8337"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="notes"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="triliumnext/notes:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/trilium.yml"
+APP_APPDATA_DIR="appdata/trilium"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Trilium Next (community fork of Trilium) has built-in authentication with password and encryption. Supports desktop sync clients. Set TRILIUM_DATA_DIR to your data path."

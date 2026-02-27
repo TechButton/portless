@@ -1,0 +1,19 @@
+services:
+  # GPTWOL - Wake on LAN Web UI
+  # https://github.com/Misterbabou/gptwol
+  gptwol:
+    image: misterbabou/gptwol:latest
+    container_name: gptwol
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["network", "all"]
+    # host network required for broadcasting magic WoL packets
+    network_mode: host
+    volumes:
+      - $DOCKERDIR/appdata/gptwol:/app/appdata
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PORT: ${GPTWOL_PORT:-5000}
+    # DOCKER-LABELS-PLACEHOLDER

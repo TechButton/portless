@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Cloud Commander
+APP_NAME="cloud-commander"
+APP_DESCRIPTION="Web-based file manager with a two-panel interface, terminal, and editor"
+APP_CATEGORY="management"
+APP_PORT_VAR="CLOUD_COMMANDER_PORT"
+APP_DEFAULT_HOST_PORT="8366"
+APP_SERVICE_PORT="8000"
+APP_DEFAULT_SUBDOMAIN="files"
+APP_AUTH="tinyauth"
+APP_PROFILES="management,all"
+APP_IMAGE="coderaiser/cloudcmd:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/cloud-commander.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="Cloud Commander has optional built-in auth — TinyAuth adds a stronger auth layer. Mounts host filesystem paths for browsing. Includes a web terminal and editor. Exercise caution exposing this publicly — it provides filesystem and shell access."

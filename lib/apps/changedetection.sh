@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Change Detection
+APP_NAME="changedetection"
+APP_DESCRIPTION="Website change detection and monitoring — get notified when any webpage changes"
+APP_CATEGORY="management"
+APP_PORT_VAR="CHANGEDETECTION_PORT"
+APP_DEFAULT_HOST_PORT="8342"
+APP_SERVICE_PORT="5000"
+APP_DEFAULT_SUBDOMAIN="changes"
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="ghcr.io/dgtlmoon/changedetection.io:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/changedetection.yml"
+APP_APPDATA_DIR="appdata/changedetection"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Change Detection has optional built-in password protection. Supports JavaScript rendering via Playwright/Puppeteer (optional extra container). Get alerts via email, Discord, Slack, ntfy, Gotify, and more."

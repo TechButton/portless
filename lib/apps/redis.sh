@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Redis
+APP_NAME="redis"
+APP_DESCRIPTION="In-memory data store used as a cache and message broker — required by Authentik, Paperless-NGX, and others"
+APP_CATEGORY="database"
+APP_PORT_VAR="REDIS_PORT"
+APP_DEFAULT_HOST_PORT="6379"
+APP_SERVICE_PORT="6379"
+APP_DEFAULT_SUBDOMAIN=""
+APP_AUTH="none"
+APP_PROFILES="database,all"
+APP_IMAGE="redis:7-alpine"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/redis.yml"
+APP_APPDATA_DIR="appdata/redis"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="No web UI. Shared cache instance used by multiple apps. Persistency enabled by default. Use Redis Commander for a web-based management interface."

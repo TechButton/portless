@@ -1,0 +1,22 @@
+services:
+  # PdfDing - PDF Manager and Viewer
+  # https://github.com/mrmn2/PdfDing
+  pdfding:
+    image: mrmn/pdfding:latest
+    container_name: pdfding
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["documents", "all"]
+    networks:
+      - default
+    ports:
+      - "$PDFDING_PORT:8000"
+    volumes:
+      - $DOCKERDIR/appdata/pdfding:/app/mediafiles
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      SECRET_KEY: ${PDFDING_SECRET:-changeme-use-a-random-string}
+      ALLOWED_HOSTS: "*"
+    # DOCKER-LABELS-PLACEHOLDER

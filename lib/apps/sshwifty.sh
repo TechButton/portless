@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: SSHwifty
+APP_NAME="sshwifty"
+APP_DESCRIPTION="Web-based SSH and Telnet client — access servers from any browser without a local SSH client"
+APP_CATEGORY="network"
+APP_PORT_VAR="SSHWIFTY_PORT"
+APP_DEFAULT_HOST_PORT="8360"
+APP_SERVICE_PORT="8182"
+APP_DEFAULT_SUBDOMAIN="ssh"
+APP_AUTH="tinyauth"
+APP_PROFILES="network,all"
+APP_IMAGE="niruix/sshwifty:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/sshwifty.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="SSHwifty has optional shared password auth — TinyAuth adds a proper auth layer. Provides browser-based SSH and Telnet. Configure preset servers via environment variables. Exercise caution exposing publicly — it provides shell access."

@@ -1,0 +1,92 @@
+services:
+  # Authentik - Identity Provider and SSO
+  # https://github.com/goauthentik/authentik
+  authentik-server:
+    image: ghcr.io/goauthentik/server:latest
+    container_name: authentik-server
+    command: server
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["security", "all"]
+    networks:
+      - default
+    ports:
+      - "$AUTHENTIK_PORT:9000"
+    volumes:
+      - $DOCKERDIR/appdata/authentik/media:/media
+      - $DOCKERDIR/appdata/authentik/templates:/templates
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - authentik-postgresql
+      - authentik-redis
+    environment:
+      TZ: $TZ
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgresql
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_PG_PASSWORD:-changeme123}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:-changeme-use-a-50-char-random-string}
+    # DOCKER-LABELS-PLACEHOLDER
+
+  # Authentik Worker
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:latest
+    container_name: authentik-worker
+    command: worker
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["security", "all"]
+    networks:
+      - default
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - $DOCKERDIR/appdata/authentik/media:/media
+      - $DOCKERDIR/appdata/authentik/certs:/certs
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - authentik-postgresql
+      - authentik-redis
+    environment:
+      TZ: $TZ
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgresql
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_PG_PASSWORD:-changeme123}
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:-changeme-use-a-50-char-random-string}
+
+  # PostgreSQL for Authentik
+  authentik-postgresql:
+    image: postgres:16-alpine
+    container_name: authentik-postgresql
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["security", "all"]
+    networks:
+      - default
+    volumes:
+      - authentik-pg-data:/var/lib/postgresql/data
+    environment:
+      TZ: $TZ
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: ${AUTHENTIK_PG_PASSWORD:-changeme123}
+      POSTGRES_DB: authentik
+
+  # Redis for Authentik
+  authentik-redis:
+    image: redis:7-alpine
+    container_name: authentik-redis
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["security", "all"]
+    networks:
+      - default
+    command: --save 60 1
+
+volumes:
+  authentik-pg-data:

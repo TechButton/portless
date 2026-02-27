@@ -1,0 +1,22 @@
+services:
+  # Flame - Startpage Dashboard
+  # https://github.com/pawelmalak/flame
+  flame:
+    image: pawelmalak/flame:multiarch
+    container_name: flame
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["dashboard", "all"]
+    networks:
+      - default
+    ports:
+      - "$FLAME_PORT:5005"
+    volumes:
+      - $DOCKERDIR/appdata/flame:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PASSWORD: ${FLAME_PASSWORD:-changeme}
+    # DOCKER-LABELS-PLACEHOLDER

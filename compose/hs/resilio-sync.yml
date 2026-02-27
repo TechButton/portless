@@ -1,0 +1,25 @@
+services:
+  # Resilio Sync - P2P File Synchronization
+  # https://github.com/bt-sync/sync-docker
+  resilio-sync:
+    image: lscr.io/linuxserver/resilio-sync:latest
+    container_name: resilio-sync
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    ports:
+      - "$RESILIO_PORT:8888"
+      - "55555:55555"
+    volumes:
+      - $DOCKERDIR/appdata/resilio-sync:/config
+      # Map your sync folders:
+      # - /path/to/sync:/sync
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER

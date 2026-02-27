@@ -1,0 +1,50 @@
+services:
+  # Nextcloud - Self-Hosted Cloud Storage
+  # https://github.com/nextcloud/server
+  nextcloud:
+    image: lscr.io/linuxserver/nextcloud:latest
+    container_name: nextcloud
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    ports:
+      - "$NEXTCLOUD_PORT:80"
+    volumes:
+      - $DOCKERDIR/appdata/nextcloud:/config
+      - $DOCKERDIR/appdata/nextcloud/data:/data
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - nextcloud-db
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      MYSQL_HOST: nextcloud-db
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: ${NEXTCLOUD_DB_PASSWORD:-changeme123}
+    # DOCKER-LABELS-PLACEHOLDER
+
+  # MariaDB for Nextcloud
+  nextcloud-db:
+    image: lscr.io/linuxserver/mariadb:latest
+    container_name: nextcloud-db
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    volumes:
+      - $DOCKERDIR/appdata/nextcloud/db:/config
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      MYSQL_ROOT_PASSWORD: ${NEXTCLOUD_DB_ROOT_PASSWORD:-changeme123}
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: ${NEXTCLOUD_DB_PASSWORD:-changeme123}

@@ -1,0 +1,25 @@
+services:
+  # cAdvisor - Container Resource Monitoring
+  # https://github.com/google/cadvisor
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    privileged: true
+    restart: unless-stopped
+    profiles: ["monitoring", "all"]
+    networks:
+      - default
+    ports:
+      - "$CADVISOR_PORT:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /etc/localtime:/etc/localtime:ro
+    devices:
+      - /dev/kmsg
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

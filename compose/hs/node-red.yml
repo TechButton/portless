@@ -1,0 +1,21 @@
+services:
+  # Node-RED - Visual IoT/Automation Programming
+  # https://github.com/node-red/node-red
+  node-red:
+    image: nodered/node-red:latest
+    container_name: node-red
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["automation", "all"]
+    networks:
+      - default
+    ports:
+      - "$NODE_RED_PORT:1880"
+    volumes:
+      - $DOCKERDIR/appdata/node-red:/data
+      - /etc/localtime:/etc/localtime:ro
+    user: "$PUID:$PGID"
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

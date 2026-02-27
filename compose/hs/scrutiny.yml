@@ -1,0 +1,32 @@
+services:
+  # Scrutiny - Hard Drive SMART Monitoring
+  # https://github.com/AnalogJ/scrutiny
+  scrutiny:
+    image: ghcr.io/analogj/scrutiny:master-omnibus
+    container_name: scrutiny
+    security_opt:
+      - no-new-privileges:true
+    cap_add:
+      - SYS_RAWIO
+      # Add SYS_ADMIN for NVMe drive support:
+      # - SYS_ADMIN
+    restart: unless-stopped
+    profiles: ["monitoring", "all"]
+    networks:
+      - default
+    ports:
+      - "$SCRUTINY_PORT:8080"
+      # InfluxDB admin (optional):
+      # - "8086:8086"
+    volumes:
+      - $DOCKERDIR/appdata/scrutiny/config:/opt/scrutiny/config
+      - $DOCKERDIR/appdata/scrutiny/influxdb:/opt/scrutiny/influxdb
+      - /run/udev:/run/udev:ro
+      - /etc/localtime:/etc/localtime:ro
+    # Add your disks — example:
+    # devices:
+    #   - /dev/sda:/dev/sda
+    #   - /dev/sdb:/dev/sdb
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

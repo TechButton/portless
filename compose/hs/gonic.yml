@@ -1,0 +1,27 @@
+services:
+  # Gonic - Lightweight Subsonic Music Server
+  # https://github.com/sentriz/gonic
+  gonic:
+    image: sentriz/gonic:latest
+    container_name: gonic
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    ports:
+      - "$GONIC_PORT:4747"
+    volumes:
+      - $DOCKERDIR/appdata/gonic:/data
+      # Map your music library:
+      # - /path/to/music:/music:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      GONIC_MUSIC_PATH: /music
+      GONIC_PODCAST_PATH: /podcasts
+      GONIC_CACHE_PATH: /cache
+    # DOCKER-LABELS-PLACEHOLDER

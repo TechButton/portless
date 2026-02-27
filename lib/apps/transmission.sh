@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Transmission
+APP_NAME="transmission"
+APP_DESCRIPTION="Lightweight BitTorrent client with a clean web UI — simple alternative to qBittorrent"
+APP_CATEGORY="downloads"
+APP_PORT_VAR="TRANSMISSION_PORT"
+APP_DEFAULT_HOST_PORT="9092"
+APP_SERVICE_PORT="9091"
+APP_DEFAULT_SUBDOMAIN="torrents"
+APP_AUTH="none"
+APP_PROFILES="downloads,all"
+APP_IMAGE="lscr.io/linuxserver/transmission:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/transmission.yml"
+APP_APPDATA_DIR="appdata/transmission"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Transmission has built-in username/password auth (set USER and PASS env vars). Mount your downloads directory to /downloads. For VPN-isolated torrenting, use the qbittorrent-vpn compose snippet with Gluetun instead."

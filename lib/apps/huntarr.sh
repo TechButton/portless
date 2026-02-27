@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Huntarr
+APP_NAME="huntarr"
+APP_DESCRIPTION="Automated missing episode and movie hunter for Sonarr, Radarr, Lidarr, and Readarr"
+APP_CATEGORY="arr"
+APP_PORT_VAR="HUNTARR_PORT"
+APP_DEFAULT_HOST_PORT="9705"
+APP_SERVICE_PORT="9705"
+APP_DEFAULT_SUBDOMAIN="huntarr"
+APP_AUTH="none"
+APP_PROFILES="arr,all"
+APP_IMAGE="huntarr/huntarr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/huntarr.yml"
+APP_APPDATA_DIR="appdata/huntarr"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Huntarr has built-in authentication. Connects to Sonarr, Radarr, Lidarr, and Readarr APIs to continuously search for missing content. Respects API rate limits and configurable search intervals."

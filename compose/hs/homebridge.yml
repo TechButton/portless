@@ -1,0 +1,22 @@
+services:
+  # Homebridge - HomeKit Bridge
+  # https://github.com/homebridge/homebridge
+  homebridge:
+    image: homebridge/homebridge:latest
+    container_name: homebridge
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["automation", "all"]
+    # host network required for mDNS/Bonjour HomeKit discovery
+    network_mode: host
+    volumes:
+      - $DOCKERDIR/appdata/homebridge:/homebridge
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      HOMEBRIDGE_CONFIG_UI: "1"
+      HOMEBRIDGE_CONFIG_UI_PORT: ${HOMEBRIDGE_PORT:-8581}
+    # DOCKER-LABELS-PLACEHOLDER

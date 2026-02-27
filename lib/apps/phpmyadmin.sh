@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: phpMyAdmin
+APP_NAME="phpmyadmin"
+APP_DESCRIPTION="Web-based MySQL and MariaDB administration interface"
+APP_CATEGORY="database"
+APP_PORT_VAR="PHPMYADMIN_PORT"
+APP_DEFAULT_HOST_PORT="8323"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="phpmyadmin"
+APP_AUTH="tinyauth"
+APP_PROFILES="database,all"
+APP_IMAGE="phpmyadmin:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/phpmyadmin.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="phpMyAdmin uses MySQL/MariaDB credentials for login — TinyAuth adds an extra auth layer. Set PMA_HOST to your MariaDB container name."

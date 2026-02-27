@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Authentik
+APP_NAME="authentik"
+APP_DESCRIPTION="Self-hosted identity provider and SSO platform — LDAP, SAML, OAuth2, and OIDC support"
+APP_CATEGORY="security"
+APP_PORT_VAR="AUTHENTIK_PORT"
+APP_DEFAULT_HOST_PORT="8340"
+APP_SERVICE_PORT="9000"
+APP_DEFAULT_SUBDOMAIN="auth"
+APP_AUTH="none"
+APP_PROFILES="security,all"
+APP_IMAGE="ghcr.io/goauthentik/server:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/authentik.yml"
+APP_APPDATA_DIR="appdata/authentik"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Authentik requires PostgreSQL and Redis (included in compose). Set AUTHENTIK_SECRET_KEY (random string), AUTHENTIK_POSTGRESQL__PASSWORD, and AUTHENTIK_EMAIL__* for email notifications. Complete setup at /if/flow/initial-setup/ on first launch."

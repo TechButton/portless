@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Homer
+APP_NAME="homer"
+APP_DESCRIPTION="Simple, static, YAML-configured application dashboard — very lightweight"
+APP_CATEGORY="dashboard"
+APP_PORT_VAR="HOMER_PORT"
+APP_DEFAULT_HOST_PORT="8314"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="home"
+APP_AUTH="tinyauth"
+APP_PROFILES="dashboard,all"
+APP_IMAGE="ghcr.io/bastienwirtz/homer:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/homer.yml"
+APP_APPDATA_DIR="appdata/homer"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Homer has no built-in auth — TinyAuth recommended. Configure via appdata/homer/config.yml. Very fast, purely static — no server-side processing."

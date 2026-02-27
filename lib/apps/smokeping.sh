@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Smokeping
+APP_NAME="smokeping"
+APP_DESCRIPTION="Network latency and packet loss monitoring with historical graphs"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="SMOKEPING_PORT"
+APP_DEFAULT_HOST_PORT="8358"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="smokeping"
+APP_AUTH="tinyauth"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="lscr.io/linuxserver/smokeping:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/smokeping.yml"
+APP_APPDATA_DIR="appdata/smokeping"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Smokeping has no built-in auth — TinyAuth recommended. Configured via files in appdata/smokeping/config/. Targets are defined in the Targets config file. Produces beautiful round-robin graphs of network latency over time."

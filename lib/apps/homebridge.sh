@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Homebridge
+APP_NAME="homebridge"
+APP_DESCRIPTION="HomeKit bridge for smart home devices that don't natively support Apple HomeKit"
+APP_CATEGORY="automation"
+APP_PORT_VAR="HOMEBRIDGE_PORT"
+APP_DEFAULT_HOST_PORT="8581"
+APP_SERVICE_PORT="8581"
+APP_DEFAULT_SUBDOMAIN="homebridge"
+APP_AUTH="none"
+APP_PROFILES="automation,all"
+APP_IMAGE="homebridge/homebridge:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/homebridge.yml"
+APP_APPDATA_DIR="appdata/homebridge"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Homebridge has built-in authentication. Default login: admin / admin — change on first launch. Requires host network mode for mDNS/Bonjour discovery. Pairs with Home Assistant or Apple Home app. Install plugins to add device support."

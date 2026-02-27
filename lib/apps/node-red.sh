@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Node-RED
+APP_NAME="node-red"
+APP_DESCRIPTION="Flow-based visual programming for IoT and home automation — integrates with Home Assistant and MQTT"
+APP_CATEGORY="automation"
+APP_PORT_VAR="NODE_RED_PORT"
+APP_DEFAULT_HOST_PORT="1880"
+APP_SERVICE_PORT="1880"
+APP_DEFAULT_SUBDOMAIN="nodered"
+APP_AUTH="none"
+APP_PROFILES="automation,all"
+APP_IMAGE="nodered/node-red:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/node-red.yml"
+APP_APPDATA_DIR="appdata/node-red"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Node-RED has optional username/password auth (configure in settings.js). Integrates with Home Assistant, MQTT, Zigbee2MQTT, and hundreds of other services via community nodes. Mount appdata/node-red to /data."

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Gotenberg
+APP_NAME="gotenberg"
+APP_DESCRIPTION="Docker-powered PDF API — convert HTML, Office docs, and URLs to PDF via REST API"
+APP_CATEGORY="documents"
+APP_PORT_VAR="GOTENBERG_PORT"
+APP_DEFAULT_HOST_PORT="8349"
+APP_SERVICE_PORT="3000"
+APP_DEFAULT_SUBDOMAIN="gotenberg"
+APP_AUTH="tinyauth"
+APP_PROFILES="documents,all"
+APP_IMAGE="gotenberg/gotenberg:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/gotenberg.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="Gotenberg has no built-in auth — TinyAuth recommended if exposed beyond localhost. Used by Paperless-NGX for Office document conversion. Exposes a REST API at /forms/chromium/convert/html, /forms/libreoffice/convert, etc."

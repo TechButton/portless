@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Ollama
+APP_NAME="ollama"
+APP_DESCRIPTION="Run large language models locally — llama3, mistral, gemma, and more via a simple REST API"
+APP_CATEGORY="ai"
+APP_PORT_VAR="OLLAMA_PORT"
+APP_DEFAULT_HOST_PORT="11434"
+APP_SERVICE_PORT="11434"
+APP_DEFAULT_SUBDOMAIN="ollama"
+APP_AUTH="tinyauth"
+APP_PROFILES="ai,all"
+APP_IMAGE="ollama/ollama:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/ollama.yml"
+APP_APPDATA_DIR="appdata/ollama"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Ollama has no built-in auth — TinyAuth recommended if exposed beyond localhost. Pull models with 'docker exec -it ollama ollama pull llama3'. For GPU acceleration, add deploy: resources: reservations: devices with NVIDIA/AMD drivers. Pairs well with Open-WebUI."

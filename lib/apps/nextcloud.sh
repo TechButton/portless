@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Nextcloud
+APP_NAME="nextcloud"
+APP_DESCRIPTION="Self-hosted cloud storage, calendar, contacts, and collaboration platform"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="NEXTCLOUD_PORT"
+APP_DEFAULT_HOST_PORT="8352"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="cloud"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="lscr.io/linuxserver/nextcloud:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/nextcloud.yml"
+APP_APPDATA_DIR="appdata/nextcloud"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Nextcloud has built-in authentication. Requires MariaDB or PostgreSQL (included in compose). Mount your data directory for user files. Set NEXTCLOUD_TRUSTED_DOMAINS to your domain. Supports CalDAV, CardDAV, and hundreds of apps."

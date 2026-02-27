@@ -1,0 +1,23 @@
+services:
+  # Gotenberg - PDF Generation API
+  # https://github.com/gotenberg/gotenberg
+  gotenberg:
+    image: gotenberg/gotenberg:latest
+    container_name: gotenberg
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["documents", "all"]
+    networks:
+      - default
+    ports:
+      - "$GOTENBERG_PORT:3000"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    command:
+      - "gotenberg"
+      - "--api-port=3000"
+      - "--api-timeout=60s"
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

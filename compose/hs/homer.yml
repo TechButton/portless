@@ -1,0 +1,21 @@
+services:
+  # Homer - Simple Static Dashboard
+  # https://github.com/bastienwirtz/homer
+  homer:
+    image: ghcr.io/bastienwirtz/homer:latest
+    container_name: homer
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["dashboard", "all"]
+    networks:
+      - default
+    ports:
+      - "$HOMER_PORT:8080"
+    volumes:
+      - $DOCKERDIR/appdata/homer:/www/assets
+      - /etc/localtime:/etc/localtime:ro
+    user: "$PUID:$PGID"
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

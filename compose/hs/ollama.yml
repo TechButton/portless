@@ -1,0 +1,29 @@
+services:
+  # Ollama - Local LLM Inference Server
+  # https://github.com/ollama/ollama
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["ai", "all"]
+    networks:
+      - default
+    ports:
+      - "$OLLAMA_PORT:11434"
+    volumes:
+      - $DOCKERDIR/appdata/ollama:/root/.ollama
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      # Uncomment for NVIDIA GPU support:
+      # NVIDIA_VISIBLE_DEVICES: all
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+    # DOCKER-LABELS-PLACEHOLDER

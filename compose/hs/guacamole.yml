@@ -1,0 +1,39 @@
+services:
+  # Guacamole - Clientless Remote Desktop Gateway
+  # https://github.com/apache/guacamole-server
+  guacamole:
+    image: guacamole/guacamole:latest
+    container_name: guacamole
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["network", "all"]
+    networks:
+      - default
+    ports:
+      - "$GUACAMOLE_PORT:8080"
+    depends_on:
+      - guacd
+    volumes:
+      - $DOCKERDIR/appdata/guacamole:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      GUACD_HOSTNAME: guacd
+      GUACD_PORT: 4822
+    # DOCKER-LABELS-PLACEHOLDER
+
+  # guacd - Guacamole Proxy Daemon
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["network", "all"]
+    networks:
+      - default
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ

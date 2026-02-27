@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Heimdall
+APP_NAME="heimdall"
+APP_DESCRIPTION="Elegant application dashboard with enhanced app tiles and custom links"
+APP_CATEGORY="dashboard"
+APP_PORT_VAR="HEIMDALL_PORT"
+APP_DEFAULT_HOST_PORT="8313"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="home"
+APP_AUTH="tinyauth"
+APP_PROFILES="dashboard,all"
+APP_IMAGE="lscr.io/linuxserver/heimdall:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/heimdall.yml"
+APP_APPDATA_DIR="appdata/heimdall"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Heimdall has no built-in auth — TinyAuth recommended. Apps are added through the web UI with enhanced tile support for many popular self-hosted apps."

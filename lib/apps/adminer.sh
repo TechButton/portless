@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Adminer
+APP_NAME="adminer"
+APP_DESCRIPTION="Lightweight single-file database management UI — supports MySQL, PostgreSQL, SQLite, and more"
+APP_CATEGORY="database"
+APP_PORT_VAR="ADMINER_PORT"
+APP_DEFAULT_HOST_PORT="8301"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="adminer"
+APP_AUTH="tinyauth"
+APP_PROFILES="database,all"
+APP_IMAGE="adminer:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/adminer.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""
+APP_NOTES="Adminer has no session persistence — TinyAuth is strongly recommended. Login with your database credentials through the UI. Lighter than phpMyAdmin."

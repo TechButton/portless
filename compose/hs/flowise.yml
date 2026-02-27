@@ -1,0 +1,24 @@
+services:
+  # Flowise - Visual LLM Workflow Builder
+  # https://github.com/FlowiseAI/Flowise
+  flowise:
+    image: flowiseai/flowise:latest
+    container_name: flowise
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["ai", "all"]
+    networks:
+      - default
+    ports:
+      - "$FLOWISE_PORT:3000"
+    volumes:
+      - $DOCKERDIR/appdata/flowise:/root/.flowise
+      - /etc/localtime:/etc/localtime:ro
+    user: "$PUID:$PGID"
+    environment:
+      TZ: $TZ
+      PORT: "3000"
+      FLOWISE_USERNAME: ${FLOWISE_USERNAME:-admin}
+      FLOWISE_PASSWORD: ${FLOWISE_PASSWORD:-changeme}
+    # DOCKER-LABELS-PLACEHOLDER

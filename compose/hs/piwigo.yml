@@ -1,0 +1,46 @@
+services:
+  # Piwigo - Photo Gallery
+  # https://github.com/Piwigo/Piwigo
+  piwigo:
+    image: lscr.io/linuxserver/piwigo:latest
+    container_name: piwigo
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    ports:
+      - "$PIWIGO_PORT:80"
+    volumes:
+      - $DOCKERDIR/appdata/piwigo:/config
+      - $DOCKERDIR/appdata/piwigo/gallery:/gallery
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - piwigo-db
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER
+
+  # MariaDB for Piwigo
+  piwigo-db:
+    image: lscr.io/linuxserver/mariadb:latest
+    container_name: piwigo-db
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    volumes:
+      - $DOCKERDIR/appdata/piwigo/db:/config
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      MYSQL_ROOT_PASSWORD: ${PIWIGO_DB_ROOT_PASSWORD:-changeme123}
+      MYSQL_DATABASE: piwigo
+      MYSQL_USER: piwigo
+      MYSQL_PASSWORD: ${PIWIGO_DB_PASSWORD:-changeme123}

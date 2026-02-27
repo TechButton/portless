@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Speedtest Tracker
+APP_NAME="speedtest-tracker"
+APP_DESCRIPTION="Automatic internet speed test scheduler with historical graphs and Grafana integration"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="SPEEDTEST_PORT"
+APP_DEFAULT_HOST_PORT="8359"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="speedtest"
+APP_AUTH="none"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="lscr.io/linuxserver/speedtest-tracker:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/speedtest-tracker.yml"
+APP_APPDATA_DIR="appdata/speedtest-tracker"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Speedtest Tracker has built-in authentication. Set APP_KEY (random base64 string) env var. Runs Ookla Speedtest at configurable intervals. Exports metrics to InfluxDB and supports Grafana dashboards."

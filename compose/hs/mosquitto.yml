@@ -1,0 +1,23 @@
+services:
+  # Mosquitto - MQTT Broker
+  # https://github.com/eclipse/mosquitto
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["automation", "all"]
+    networks:
+      - default
+    ports:
+      - "$MOSQUITTO_PORT:1883"
+      - "9001:9001"
+    volumes:
+      - $DOCKERDIR/appdata/mosquitto/config:/mosquitto/config
+      - $DOCKERDIR/appdata/mosquitto/data:/mosquitto/data
+      - $DOCKERDIR/appdata/mosquitto/log:/mosquitto/log
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

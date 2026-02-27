@@ -1,0 +1,20 @@
+services:
+  # Cleanuparr - Arr Stack Cleanup Tool
+  # https://github.com/Cleanuparr/Cleanuparr
+  cleanuparr:
+    image: ghcr.io/cleanuparr/cleanuparr:latest
+    container_name: cleanuparr
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["arr", "all"]
+    networks:
+      - default
+    ports:
+      - "$CLEANUPARR_PORT:11011"
+    volumes:
+      - $DOCKERDIR/appdata/cleanuparr:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

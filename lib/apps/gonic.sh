@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Gonic
+APP_NAME="gonic"
+APP_DESCRIPTION="Lightweight Subsonic-compatible music streaming server written in Go"
+APP_CATEGORY="media"
+APP_PORT_VAR="GONIC_PORT"
+APP_DEFAULT_HOST_PORT="4747"
+APP_SERVICE_PORT="4747"
+APP_DEFAULT_SUBDOMAIN="music"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="sentriz/gonic:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/gonic.yml"
+APP_APPDATA_DIR="appdata/gonic"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Gonic has built-in authentication. Map your music library to /music in the container. Supports Subsonic API clients and podcast support."

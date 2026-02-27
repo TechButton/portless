@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Organizr
+APP_NAME="organizr"
+APP_DESCRIPTION="Tabbed HTPC/homelab organizer — embed multiple services in a single unified interface"
+APP_CATEGORY="dashboard"
+APP_PORT_VAR="ORGANIZR_PORT"
+APP_DEFAULT_HOST_PORT="8319"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="home"
+APP_AUTH="none"
+APP_PROFILES="dashboard,all"
+APP_IMAGE="organizr/organizr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/organizr.yml"
+APP_APPDATA_DIR="appdata/organizr"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Organizr has built-in authentication with user groups. Lets you embed other services (Sonarr, Radarr, etc.) as tabs in a single portal. Supports Plex/Emby SSO."

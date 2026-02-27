@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Tautulli
+APP_NAME="tautulli"
+APP_DESCRIPTION="Plex statistics, activity monitoring, and notification agent"
+APP_CATEGORY="media"
+APP_PORT_VAR="TAUTULLI_PORT"
+APP_DEFAULT_HOST_PORT="8181"
+APP_SERVICE_PORT="8181"
+APP_DEFAULT_SUBDOMAIN="tautulli"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="lscr.io/linuxserver/tautulli:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/tautulli.yml"
+APP_APPDATA_DIR="appdata/tautulli"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Tautulli has built-in authentication. Connect to Plex by entering your Plex server URL and token during setup. Provides rich history, statistics, and notification support."

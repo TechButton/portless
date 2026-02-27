@@ -1,0 +1,78 @@
+services:
+  # Paperless-NGX - Document Management System
+  # https://github.com/paperless-ngx/paperless-ngx
+  paperless-ngx:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless-ngx
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    ports:
+      - "$PAPERLESS_PORT:8000"
+    volumes:
+      - $DOCKERDIR/appdata/paperless-ngx/data:/usr/src/paperless/data
+      - $DOCKERDIR/appdata/paperless-ngx/media:/usr/src/paperless/media
+      - $DOCKERDIR/appdata/paperless-ngx/export:/usr/src/paperless/export
+      - $DOCKERDIR/appdata/paperless-ngx/consume:/usr/src/paperless/consume
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - paperless-redis
+      - paperless-gotenberg
+    environment:
+      TZ: $TZ
+      PAPERLESS_REDIS: redis://paperless-redis:6379
+      PAPERLESS_TIKA_ENABLED: 1
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://paperless-gotenberg:3000
+      PAPERLESS_TIKA_ENDPOINT: http://paperless-tika:9998
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY:-changeme-use-a-long-random-string}
+      PAPERLESS_TIME_ZONE: $TZ
+      PAPERLESS_OCR_LANGUAGE: eng
+      PAPERLESS_URL: "https://docs.${DOMAINNAME_1}"
+      USERMAP_UID: $PUID
+      USERMAP_GID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER
+
+  # Redis for Paperless-NGX (dedicated instance)
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    volumes:
+      - paperless-redis-data:/data
+
+  # Gotenberg for Office document conversion
+  paperless-gotenberg:
+    image: gotenberg/gotenberg:latest
+    container_name: paperless-gotenberg
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+
+  # Tika for Office document text extraction
+  paperless-tika:
+    image: ghcr.io/paperless-ngx/tika:latest
+    container_name: paperless-tika
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+
+volumes:
+  paperless-redis-data:

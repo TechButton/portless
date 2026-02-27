@@ -1,0 +1,21 @@
+services:
+  # Wallos - Subscription Tracker
+  # https://github.com/ellite/Wallos
+  wallos:
+    image: bellamy/wallos:latest
+    container_name: wallos
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    ports:
+      - "$WALLOS_PORT:80"
+    volumes:
+      - $DOCKERDIR/appdata/wallos/db:/var/www/html/db
+      - $DOCKERDIR/appdata/wallos/logos:/var/www/html/images/uploads/logos
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

@@ -1,0 +1,20 @@
+services:
+  # SSHwifty - Web-Based SSH Client
+  # https://github.com/nirui/sshwifty
+  sshwifty:
+    image: niruix/sshwifty:latest
+    container_name: sshwifty
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["network", "all"]
+    networks:
+      - default
+    ports:
+      - "$SSHWIFTY_PORT:8182"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      SSHWIFTY_SHAREDsecret: ${SSHWIFTY_SECRET:-changeme}
+    # DOCKER-LABELS-PLACEHOLDER

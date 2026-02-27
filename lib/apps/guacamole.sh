@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Guacamole
+APP_NAME="guacamole"
+APP_DESCRIPTION="Clientless remote desktop gateway — access RDP, VNC, and SSH sessions from a web browser"
+APP_CATEGORY="network"
+APP_PORT_VAR="GUACAMOLE_PORT"
+APP_DEFAULT_HOST_PORT="8350"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="remote"
+APP_AUTH="none"
+APP_PROFILES="network,all"
+APP_IMAGE="guacamole/guacamole:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/guacamole.yml"
+APP_APPDATA_DIR="appdata/guacamole"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Guacamole has built-in authentication. Default login: guacadmin / guacadmin — change immediately. Requires the guacd (daemon) sidecar container (included in compose). Access at /guacamole path. Supports RDP, VNC, SSH, telnet, and Kubernetes."

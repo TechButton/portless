@@ -1,0 +1,32 @@
+services:
+  # WG-Easy - WireGuard VPN with Web UI
+  # https://github.com/wg-easy/wg-easy
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy:latest
+    container_name: wg-easy
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    restart: unless-stopped
+    profiles: ["network", "all"]
+    networks:
+      - default
+    ports:
+      - "$WG_EASY_PORT:51821"
+      - "51820:51820/udp"
+    volumes:
+      - $DOCKERDIR/appdata/wg-easy:/etc/wireguard
+      - /etc/localtime:/etc/localtime:ro
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    environment:
+      TZ: $TZ
+      WG_HOST: ${WG_HOST:-your-public-ip-or-domain}
+      PASSWORD_HASH: ${WG_PASSWORD_HASH:-}
+      WG_PORT: 51820
+      WG_DEFAULT_DNS: "1.1.1.1"
+      WG_ALLOWED_IPS: "0.0.0.0/0, ::/0"
+    # DOCKER-LABELS-PLACEHOLDER

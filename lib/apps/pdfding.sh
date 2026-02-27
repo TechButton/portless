@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: PdfDing
+APP_NAME="pdfding"
+APP_DESCRIPTION="Self-hosted PDF manager and viewer — store, annotate, and share PDF documents"
+APP_CATEGORY="documents"
+APP_PORT_VAR="PDFDING_PORT"
+APP_DEFAULT_HOST_PORT="8354"
+APP_SERVICE_PORT="8000"
+APP_DEFAULT_SUBDOMAIN="pdf"
+APP_AUTH="none"
+APP_PROFILES="documents,all"
+APP_IMAGE="mrmn/pdfding:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/pdfding.yml"
+APP_APPDATA_DIR="appdata/pdfding"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="PdfDing has built-in authentication. Uses SQLite by default (PostgreSQL supported). Supports OIDC/SSO for external login. ARM64 compatible. Store PDFs in appdata/pdfding."

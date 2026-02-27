@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: DokuWiki
+APP_NAME="dokuwiki"
+APP_DESCRIPTION="File-based wiki — no database required, simple, and highly extensible with plugins"
+APP_CATEGORY="documents"
+APP_PORT_VAR="DOKUWIKI_PORT"
+APP_DEFAULT_HOST_PORT="8308"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="wiki"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="lscr.io/linuxserver/dokuwiki:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/dokuwiki.yml"
+APP_APPDATA_DIR="appdata/dokuwiki"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="DokuWiki stores everything in plain text files — no database needed. Has built-in authentication. Complete setup at /install.php on first launch."

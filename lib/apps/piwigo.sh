@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Piwigo
+APP_NAME="piwigo"
+APP_DESCRIPTION="Self-hosted photo gallery and album management — supports albums, tags, and user accounts"
+APP_CATEGORY="media"
+APP_PORT_VAR="PIWIGO_PORT"
+APP_DEFAULT_HOST_PORT="8356"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="gallery"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="lscr.io/linuxserver/piwigo:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/piwigo.yml"
+APP_APPDATA_DIR="appdata/piwigo"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Piwigo has built-in authentication with user management. Requires MariaDB (included in compose). Complete setup at / on first launch. Supports plugins and themes. A lighter alternative to Immich for simple photo sharing."

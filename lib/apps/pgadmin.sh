@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: pgAdmin 4
+APP_NAME="pgadmin"
+APP_DESCRIPTION="Feature-rich web-based PostgreSQL administration and management interface"
+APP_CATEGORY="database"
+APP_PORT_VAR="PGADMIN_PORT"
+APP_DEFAULT_HOST_PORT="8322"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="pgadmin"
+APP_AUTH="none"
+APP_PROFILES="database,all"
+APP_IMAGE="dpage/pgadmin4:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/pgadmin.yml"
+APP_APPDATA_DIR="appdata/pgadmin"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="pgAdmin has built-in authentication. Set PGADMIN_DEFAULT_EMAIL and PGADMIN_DEFAULT_PASSWORD env vars. Change the password on first login."

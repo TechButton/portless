@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Netdata
+APP_NAME="netdata"
+APP_DESCRIPTION="Real-time per-second system and container metrics with a built-in interactive dashboard"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="NETDATA_PORT"
+APP_DEFAULT_HOST_PORT="19999"
+APP_SERVICE_PORT="19999"
+APP_DEFAULT_SUBDOMAIN="netdata"
+APP_AUTH="none"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="netdata/netdata:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/netdata.yml"
+APP_APPDATA_DIR="appdata/netdata"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Netdata has optional Netdata Cloud SSO. Runs with host PID namespace and Docker socket for full visibility. Add TinyAuth if you want local-only auth without Netdata Cloud."

@@ -1,0 +1,23 @@
+services:
+  # Jackett - Torrent Indexer Proxy
+  # https://github.com/Jackett/Jackett
+  jackett:
+    image: lscr.io/linuxserver/jackett:latest
+    container_name: jackett
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["arr", "all"]
+    networks:
+      - default
+    ports:
+      - "$JACKETT_PORT:9117"
+    volumes:
+      - $DOCKERDIR/appdata/jackett:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      AUTO_UPDATE: "true"
+    # DOCKER-LABELS-PLACEHOLDER

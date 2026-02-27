@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: PrivateBin
+APP_NAME="privatebin"
+APP_DESCRIPTION="Zero-knowledge encrypted pastebin — the server never sees unencrypted content"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="PRIVATEBIN_PORT"
+APP_DEFAULT_HOST_PORT="8326"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="paste"
+APP_AUTH="tinyauth"
+APP_PROFILES="productivity,all"
+APP_IMAGE="privatebin/nginx-fpm-alpine:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/privatebin.yml"
+APP_APPDATA_DIR="appdata/privatebin"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="PrivateBin encrypts pastes client-side before sending to the server. No auth built-in — TinyAuth recommended to restrict who can create pastes."

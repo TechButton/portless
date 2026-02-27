@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Paperless-NGX
+APP_NAME="paperless-ngx"
+APP_DESCRIPTION="Document management system with OCR, tagging, full-text search, and automatic organisation"
+APP_CATEGORY="documents"
+APP_PORT_VAR="PAPERLESS_PORT"
+APP_DEFAULT_HOST_PORT="8320"
+APP_SERVICE_PORT="8000"
+APP_DEFAULT_SUBDOMAIN="docs"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="ghcr.io/paperless-ngx/paperless-ngx:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/paperless-ngx.yml"
+APP_APPDATA_DIR="appdata/paperless-ngx"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Paperless-NGX has built-in authentication. Compose includes Redis (required) and Gotenberg+Tika (optional, for better PDF and Office doc parsing). Scan documents by dropping files into the consume folder."

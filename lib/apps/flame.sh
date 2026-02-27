@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Flame
+APP_NAME="flame"
+APP_DESCRIPTION="Self-hosted startpage with bookmarks, Docker service discovery, and weather widget"
+APP_CATEGORY="dashboard"
+APP_PORT_VAR="FLAME_PORT"
+APP_DEFAULT_HOST_PORT="5005"
+APP_SERVICE_PORT="5005"
+APP_DEFAULT_SUBDOMAIN="home"
+APP_AUTH="none"
+APP_PROFILES="dashboard,all"
+APP_IMAGE="pawelmalak/flame:multiarch"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/flame.yml"
+APP_APPDATA_DIR="appdata/flame"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Flame has optional password protection built in. Supports Docker label-based app discovery and has a weather widget (requires OpenWeatherMap API key)."
