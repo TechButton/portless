@@ -1,0 +1,21 @@
+services:
+  # ─── Cloudflare Tunnel ────────────────────────────────────────────────────
+  # Connects to Cloudflare's edge network so services are reachable from
+  # the internet without a VPS or open ports. All traffic routes through
+  # Traefik on the t3_proxy network.
+  #
+  # Setup: ./manage.sh tunnel setup
+  # Docs:  https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    networks:
+      - t3_proxy
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"

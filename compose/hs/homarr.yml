@@ -1,0 +1,21 @@
+services:
+  # Homarr - Modern Dashboard
+  # https://github.com/homarr-labs/homarr
+  homarr:
+    image: ghcr.io/homarr-labs/homarr:latest
+    container_name: homarr
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["dashboard", "all"]
+    networks:
+      - default
+    ports:
+      - "$HOMARR_PORT:7575"
+    volumes:
+      - $DOCKERDIR/appdata/homarr:/appdata
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      SECRET_ENCRYPTION_KEY: ${HOMARR_SECRET_KEY:-change_this_to_a_64_char_hex_string}
+    # DOCKER-LABELS-PLACEHOLDER

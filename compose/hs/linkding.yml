@@ -1,0 +1,22 @@
+services:
+  # Linkding - Bookmark Manager
+  # https://github.com/sissbruecker/linkding
+  linkding:
+    image: sissbruecker/linkding:latest
+    container_name: linkding
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    ports:
+      - "$LINKDING_PORT:9090"
+    volumes:
+      - $DOCKERDIR/appdata/linkding:/etc/linkding/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      LD_SUPERUSER_NAME: admin
+      LD_SUPERUSER_PASSWORD: ${LINKDING_ADMIN_PASSWORD:-changeme}
+    # DOCKER-LABELS-PLACEHOLDER

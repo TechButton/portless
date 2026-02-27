@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Audiobookshelf
+APP_NAME="audiobookshelf"
+APP_DESCRIPTION="Self-hosted audiobook and podcast server with iOS and Android apps"
+APP_CATEGORY="media"
+APP_PORT_VAR="ABS_PORT"
+APP_DEFAULT_HOST_PORT="8097"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="abs"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="ghcr.io/advplyr/audiobookshelf:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/audiobookshelf.yml"
+APP_APPDATA_DIR="appdata/audiobookshelf"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Audiobookshelf has built-in auth. Point your audiobook and podcast library paths in the UI after first login."

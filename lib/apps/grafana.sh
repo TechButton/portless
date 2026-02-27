@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Grafana
+APP_NAME="grafana"
+APP_DESCRIPTION="Industry-standard dashboarding and visualization platform for metrics — pairs with Prometheus or InfluxDB"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="GRAFANA_PORT"
+APP_DEFAULT_HOST_PORT="3100"
+APP_SERVICE_PORT="3000"
+APP_DEFAULT_SUBDOMAIN="grafana"
+APP_AUTH="none"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="grafana/grafana:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/grafana.yml"
+APP_APPDATA_DIR="appdata/grafana"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Grafana has built-in authentication. Default login: admin / admin — change on first boot. Add Prometheus as a data source, then import community dashboards from grafana.com/dashboards."

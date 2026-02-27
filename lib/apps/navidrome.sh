@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Navidrome
+APP_NAME="navidrome"
+APP_DESCRIPTION="Lightweight self-hosted music streaming server — Subsonic-compatible, works with DSub, Symfonium, and others"
+APP_CATEGORY="media"
+APP_PORT_VAR="NAVIDROME_PORT"
+APP_DEFAULT_HOST_PORT="4533"
+APP_SERVICE_PORT="4533"
+APP_DEFAULT_SUBDOMAIN="music"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="deluan/navidrome:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/navidrome.yml"
+APP_APPDATA_DIR="appdata/navidrome"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Map your music library path to /music (read-only) in the compose volume. Navidrome has built-in authentication."

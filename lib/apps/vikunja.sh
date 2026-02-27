@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Vikunja
+APP_NAME="vikunja"
+APP_DESCRIPTION="Self-hosted to-do and project manager with list, Kanban, Gantt, and calendar views"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="VIKUNJA_PORT"
+APP_DEFAULT_HOST_PORT="3456"
+APP_SERVICE_PORT="3456"
+APP_DEFAULT_SUBDOMAIN="tasks"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="vikunja/vikunja:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/vikunja.yml"
+APP_APPDATA_DIR="appdata/vikunja"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Vikunja uses SQLite by default — no separate database needed. Has built-in authentication. Set VIKUNJA_SERVICE_PUBLICURL to your public URL for links to work correctly."

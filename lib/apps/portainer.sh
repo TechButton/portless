@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Portainer
+APP_NAME="portainer"
+APP_DESCRIPTION="Docker container management UI — manage your containers with a web interface"
+APP_CATEGORY="management"
+APP_PORT_VAR="PORTAINER_PORT"
+APP_DEFAULT_HOST_PORT="9000"
+APP_SERVICE_PORT="9000"
+APP_DEFAULT_SUBDOMAIN="portainer"
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="portainer/portainer-ce:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/portainer.yml"
+APP_APPDATA_DIR="appdata/portainer"
+APP_REQUIRES_VOLUMES="appdata,/var/run/docker.sock"
+APP_NOTES="Portainer has its own auth. Access the first-time setup at https://portainer.yourdomain.com within 5 minutes of starting."

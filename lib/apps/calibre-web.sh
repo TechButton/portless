@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Calibre-Web
+APP_NAME="calibre-web"
+APP_DESCRIPTION="Web-based e-book library browser and reader backed by a Calibre database"
+APP_CATEGORY="media"
+APP_PORT_VAR="CALIBREWEB_PORT"
+APP_DEFAULT_HOST_PORT="8083"
+APP_SERVICE_PORT="8083"
+APP_DEFAULT_SUBDOMAIN="books"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="lscr.io/linuxserver/calibre-web:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/calibre-web.yml"
+APP_APPDATA_DIR="appdata/calibre-web"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Requires an existing Calibre library (metadata.db). Map your Calibre library path to /books in the compose volume. Default login: admin / admin123."

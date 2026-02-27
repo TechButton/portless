@@ -1,0 +1,23 @@
+services:
+  # Kavita - Manga, Comics & E-book Server
+  # https://github.com/Kareadita/Kavita
+  kavita:
+    image: jvmilazz0/kavita:latest
+    container_name: kavita
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    ports:
+      - "$KAVITA_PORT:5000"
+    volumes:
+      - $DOCKERDIR/appdata/kavita:/kavita/config
+      # Add your manga/ebook library paths:
+      # - /path/to/manga:/manga
+      # - /path/to/books:/books
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

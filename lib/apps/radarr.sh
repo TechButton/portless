@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: Radarr
+APP_NAME="radarr"
+APP_DESCRIPTION="Movie collection manager — finds, downloads, and organizes movies"
+APP_CATEGORY="arr"
+APP_PORT_VAR="RADARR_PORT"
+APP_DEFAULT_HOST_PORT="7878"
+APP_SERVICE_PORT="7878"
+APP_DEFAULT_SUBDOMAIN="movies"
+APP_AUTH="none"
+APP_PROFILES="arr,starr,all"
+APP_IMAGE="lscr.io/linuxserver/radarr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/radarr.yml"
+APP_APPDATA_DIR="appdata/radarr"
+APP_REQUIRES_VOLUMES="appdata,data"

@@ -1,0 +1,23 @@
+services:
+  # Forgejo - Self-hosted Git
+  # https://codeberg.org/forgejo/forgejo
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:latest
+    container_name: forgejo
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["development", "all"]
+    networks:
+      - default
+    ports:
+      - "$FORGEJO_PORT:3000"
+      - "222:22"   # SSH — change host port if 22 is in use
+    volumes:
+      - $DOCKERDIR/appdata/forgejo:/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      USER_UID: $PUID
+      USER_GID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER

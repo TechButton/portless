@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Homepage
+APP_NAME="homepage"
+APP_DESCRIPTION="Highly customizable dashboard with Docker service auto-discovery and 100+ service integrations"
+APP_CATEGORY="dashboard"
+APP_PORT_VAR="HOMEPAGE_PORT"
+APP_DEFAULT_HOST_PORT="3000"
+APP_SERVICE_PORT="3000"
+APP_DEFAULT_SUBDOMAIN="home"
+APP_AUTH="tinyauth"
+APP_PROFILES="dashboard,all"
+APP_IMAGE="ghcr.io/gethomepage/homepage:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/homepage.yml"
+APP_APPDATA_DIR="appdata/homepage"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Homepage reads service widgets from YAML config files in appdata/homepage/. Needs Docker socket (via socket-proxy) for container auto-discovery."

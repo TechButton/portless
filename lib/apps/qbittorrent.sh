@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: qBittorrent (VPN-protected)
+APP_NAME="qbittorrent-vpn"
+APP_DESCRIPTION="BitTorrent client routed through Gluetun VPN"
+APP_CATEGORY="downloads"
+APP_PORT_VAR="QBITTORRENTVPN_PORT"
+APP_DEFAULT_HOST_PORT="8090"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="torrents"
+APP_AUTH="none"
+APP_PROFILES="downloads,all"
+APP_IMAGE="lscr.io/linuxserver/qbittorrent:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/qbittorrent.yml"
+APP_APPDATA_DIR="appdata/qbittorrent"
+APP_REQUIRES_VOLUMES="appdata,data"
+APP_NOTES="Deploy with gluetun for VPN-protected downloading. See compose file for VPN config."

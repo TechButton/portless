@@ -1,0 +1,59 @@
+services:
+  # ─── Headscale ────────────────────────────────────────────────────────────
+  # Self-hosted Tailscale coordination server.
+  # Devices use the standard Tailscale client but connect here instead
+  # of tailscale.com. No Tailscale account required.
+  #
+  headscale:
+    image: headscale/headscale:latest
+    container_name: headscale
+    restart: unless-stopped
+    command: serve
+    volumes:
+      - /opt/headscale/config:/etc/headscale
+      - /opt/headscale/data:/var/lib/headscale
+    ports:
+      - "0.0.0.0:8080:8080"   # Coordination API (proxied by Caddy)
+      - "0.0.0.0:9090:9090"   # Metrics
+      - "0.0.0.0:41641:41641/udp"  # WireGuard / DERP relay
+    networks:
+      - headscale
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Caddy (TLS + reverse proxy) ──────────────────────────────────────────
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+    volumes:
+      - /opt/headscale/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/headscale/caddy/data:/data
+      - /opt/headscale/caddy/config:/config
+    networks:
+      - headscale
+    depends_on:
+      - headscale
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Headscale UI (optional web dashboard) ────────────────────────────────
+  headscale-ui:
+    image: ghcr.io/gurucomputing/headscale-ui:latest
+    container_name: headscale-ui
+    restart: unless-stopped
+    environment:
+      - PORT=8888
+    networks:
+      - headscale
+    depends_on:
+      - headscale
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  headscale:
+    driver: bridge

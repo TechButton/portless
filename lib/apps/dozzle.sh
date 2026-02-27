@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: Dozzle
+APP_NAME="dozzle"
+APP_DESCRIPTION="Real-time Docker log viewer — tail any container logs from your browser"
+APP_CATEGORY="management"
+APP_PORT_VAR="DOZZLE_PORT"
+APP_DEFAULT_HOST_PORT="9999"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="logs"
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="amir20/dozzle:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/dozzle.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES="/var/run/docker.sock"

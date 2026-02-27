@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: FreshRSS
+APP_NAME="freshrss"
+APP_DESCRIPTION="Self-hosted RSS/Atom feed aggregator with multi-user support and Fever/Google Reader API"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="FRESHRSS_PORT"
+APP_DEFAULT_HOST_PORT="8081"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="rss"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="freshrss/freshrss:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/freshrss.yml"
+APP_APPDATA_DIR="appdata/freshrss"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="FreshRSS has built-in authentication. Complete setup at /i/ after first launch. Supports Reeder, NetNewsWire, and other clients via the Fever API."

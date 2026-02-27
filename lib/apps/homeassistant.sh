@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Home Assistant
+APP_NAME="homeassistant"
+APP_DESCRIPTION="The leading open-source home automation platform with thousands of device integrations"
+APP_CATEGORY="automation"
+APP_PORT_VAR="HA_PORT"
+APP_DEFAULT_HOST_PORT="8123"
+APP_SERVICE_PORT="8123"
+APP_DEFAULT_SUBDOMAIN="ha"
+APP_AUTH="none"
+APP_PROFILES="automation,all"
+APP_IMAGE="ghcr.io/home-assistant/home-assistant:stable"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/homeassistant.yml"
+APP_APPDATA_DIR="appdata/homeassistant"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Home Assistant has built-in auth. Runs with network_mode: host for local device discovery (mDNS, UPnP, Zigbee). If network_mode: host is not suitable, switch to bridge mode and add host_ip: 0.0.0.0 to configuration.yaml."

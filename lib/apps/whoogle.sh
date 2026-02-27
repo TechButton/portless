@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Whoogle
+APP_NAME="whoogle"
+APP_DESCRIPTION="Self-hosted Google search proxy — clean results without ads, tracking, or AMP links"
+APP_CATEGORY="network"
+APP_PORT_VAR="WHOOGLE_PORT"
+APP_DEFAULT_HOST_PORT="5001"
+APP_SERVICE_PORT="5000"
+APP_DEFAULT_SUBDOMAIN="search"
+APP_AUTH="tinyauth"
+APP_PROFILES="network,all"
+APP_IMAGE="benbusby/whoogle-search:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/whoogle.yml"
+APP_APPDATA_DIR="appdata/whoogle"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Whoogle has no built-in auth — TinyAuth is recommended. Set WHOOGLE_CONFIG_COUNTRY and WHOOGLE_CONFIG_LANGUAGE env vars for localised results."

@@ -1,0 +1,31 @@
+services:
+  # ─── Netbird ──────────────────────────────────────────────────────────────
+  # End-to-end encrypted WireGuard mesh VPN.
+  # After initial peer handshake, traffic flows directly — no relay.
+  # Works with Netbird Cloud (app.netbird.io) or self-hosted management.
+  #
+  # Cloud dashboard:  https://app.netbird.io
+  # Download client:  https://netbird.io/download
+  #
+  netbird:
+    image: netbirdio/netbird:latest
+    container_name: netbird
+    restart: unless-stopped
+    environment:
+      - NB_SETUP_KEY=${NETBIRD_SETUP_KEY}
+      - NB_MANAGEMENT_URL=${NETBIRD_MANAGEMENT_URL}
+    volumes:
+      - ${DOCKERDIR}/appdata/netbird:/etc/netbird
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+    devices:
+      - /dev/net/tun
+    networks:
+      - t3_proxy
+      - socket_proxy
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"

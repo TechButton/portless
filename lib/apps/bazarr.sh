@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: Bazarr
+APP_NAME="bazarr"
+APP_DESCRIPTION="Subtitle management — automatically downloads subtitles for your media"
+APP_CATEGORY="arr"
+APP_PORT_VAR="BAZARR_PORT"
+APP_DEFAULT_HOST_PORT="6767"
+APP_SERVICE_PORT="6767"
+APP_DEFAULT_SUBDOMAIN="subtitles"
+APP_AUTH="none"
+APP_PROFILES="arr,starr,all"
+APP_IMAGE="lscr.io/linuxserver/bazarr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/bazarr.yml"
+APP_APPDATA_DIR="appdata/bazarr"
+APP_REQUIRES_VOLUMES="appdata,data"

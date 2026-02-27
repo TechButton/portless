@@ -1,0 +1,25 @@
+services:
+  # n8n - Workflow Automation
+  # https://github.com/n8n-io/n8n
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["automation", "all"]
+    networks:
+      - default
+    ports:
+      - "$N8N_PORT:5678"
+    volumes:
+      - $DOCKERDIR/appdata/n8n:/home/node/.n8n
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      N8N_HOST: "n8n.${DOMAINNAME_1}"
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: "https"
+      WEBHOOK_URL: "https://n8n.${DOMAINNAME_1}/"
+      GENERIC_TIMEZONE: $TZ
+    # DOCKER-LABELS-PLACEHOLDER

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: Notifiarr
+APP_NAME="notifiarr"
+APP_DESCRIPTION="Notification hub — connects *arr apps to Discord, Telegram, Slack, and more"
+APP_CATEGORY="other"
+APP_PORT_VAR="NOTIFIARR_PORT"
+APP_DEFAULT_HOST_PORT="5454"
+APP_SERVICE_PORT="5454"
+APP_DEFAULT_SUBDOMAIN="notifiarr"
+APP_AUTH="none"
+APP_PROFILES="other,all"
+APP_IMAGE="golift/notifiarr:stable"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/notifiarr.yml"
+APP_APPDATA_DIR="appdata/notifiarr"
+APP_REQUIRES_VOLUMES="appdata"

@@ -1,0 +1,37 @@
+services:
+  # VSCode - Browser-based VS Code editor (code-server)
+  vscode:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: vscode
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["core", "all"]
+    networks:
+      - t3_proxy
+    ports:
+      - "$VSCODE_PORT:8443"
+    volumes:
+      - $DOCKERDIR:/data/docker
+      - $DOCKERDIR/appdata/vscode:/config
+      - $DATADIR1:/data/data
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      # DOCKER_HOST: tcp://socket-proxy:2375
+      # PASSWORD: $VSCODE_PASSWORD
+      # HASHED_PASSWORD: #optional
+      # SUDO_PASSWORD: password #optional
+      # PROXY_DOMAIN: code-server.my.domain #optional
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.vscode-rtr.entrypoints=websecure-internal,websecure-external"
+      - "traefik.http.routers.vscode-rtr.rule=Host(`code.$DOMAINNAME_1`)"
+      # Middlewares
+      - "traefik.http.routers.vscode-rtr.middlewares=chain-tinyauth@file"
+      # HTTP Services
+      - "traefik.http.routers.vscode-rtr.service=vscode-svc"
+      - "traefik.http.services.vscode-svc.loadbalancer.server.port=8443"
+    # DOCKER-LABELS-PLACEHOLDER

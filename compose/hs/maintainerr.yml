@@ -1,0 +1,20 @@
+services:
+  # Maintainerr - Manage Plex Media (auto-remove stale content)
+  maintainerr:
+    image: ghcr.io/jorenn92/maintainerr:latest
+    container_name: maintainerr
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["apps", "all"]
+    networks:
+      - default
+    ports:
+      - "$MAINTAINERR_PORT:6246"
+    user: $PUID:$PGID
+    volumes:
+      - $DOCKERDIR/appdata/maintainerr:/opt/data
+    environment:
+      TZ: $TZ
+      DEBUG: true
+    # DOCKER-LABELS-PLACEHOLDER

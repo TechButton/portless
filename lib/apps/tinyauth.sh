@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: TinyAuth
+APP_NAME="tinyauth"
+APP_DESCRIPTION="Self-hosted SSO — single sign-on for all your services via Traefik ForwardAuth"
+APP_CATEGORY="security"
+APP_PORT_VAR="TINYAUTH_PORT"
+APP_DEFAULT_HOST_PORT="3000"
+APP_SERVICE_PORT="3000"
+APP_DEFAULT_SUBDOMAIN="auth"
+APP_AUTH="none"
+APP_PROFILES="security,all"
+APP_IMAGE="ghcr.io/steveiliop56/tinyauth:v3"
+APP_COMPOSE_FILE=""
+APP_APPDATA_DIR="appdata/tinyauth"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="TinyAuth protects all your services with a single login at https://auth.yourdomain.com. Supports local users, GitHub/Google OAuth, and TOTP 2FA. Docs: https://tinyauth.app"

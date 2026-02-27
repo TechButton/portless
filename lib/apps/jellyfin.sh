@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Jellyfin
+APP_NAME="jellyfin"
+APP_DESCRIPTION="Jellyfin Media Server — free open-source media streaming"
+APP_CATEGORY="media"
+APP_PORT_VAR="JELLYFIN_PORT"
+APP_DEFAULT_HOST_PORT="8096"
+APP_SERVICE_PORT="8096"
+APP_DEFAULT_SUBDOMAIN="jellyfin"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="lscr.io/linuxserver/jellyfin:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/jellyfin.yml"
+APP_APPDATA_DIR="appdata/jellyfin"
+APP_REQUIRES_VOLUMES="appdata,data"
+APP_NOTES="Jellyfin has built-in authentication."

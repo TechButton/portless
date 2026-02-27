@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Vaultwarden
+APP_NAME="vaultwarden"
+APP_DESCRIPTION="Unofficial Bitwarden-compatible password manager server — lightweight, self-hosted, full-featured"
+APP_CATEGORY="security"
+APP_PORT_VAR="VAULTWARDEN_PORT"
+APP_DEFAULT_HOST_PORT="8082"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="vault"
+APP_AUTH="none"
+APP_PROFILES="security,all"
+APP_IMAGE="vaultwarden/server:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/vaultwarden.yml"
+APP_APPDATA_DIR="appdata/vaultwarden"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Vaultwarden has its own authentication plus 2FA/TOTP support. IMPORTANT: disable public registration after creating your account — set SIGNUPS_ALLOWED=false in the compose env."

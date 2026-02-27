@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: Lidarr
+APP_NAME="lidarr"
+APP_DESCRIPTION="Music collection manager — finds, downloads, and organizes music"
+APP_CATEGORY="arr"
+APP_PORT_VAR="LIDARR_PORT"
+APP_DEFAULT_HOST_PORT="8686"
+APP_SERVICE_PORT="8686"
+APP_DEFAULT_SUBDOMAIN="music"
+APP_AUTH="none"
+APP_PROFILES="arr,starr,all"
+APP_IMAGE="lscr.io/linuxserver/lidarr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/lidarr.yml"
+APP_APPDATA_DIR="appdata/lidarr"
+APP_REQUIRES_VOLUMES="appdata,data"

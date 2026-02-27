@@ -1,0 +1,21 @@
+services:
+  # Jellyseerr - Media Request Management (Jellyfin/Plex)
+  # https://github.com/Fallenbagel/jellyseerr
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["requests", "all"]
+    networks:
+      - default
+    ports:
+      - "$JELLYSEERR_PORT:5055"
+    volumes:
+      - $DOCKERDIR/appdata/jellyseerr:/app/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      LOG_LEVEL: "debug"
+    # DOCKER-LABELS-PLACEHOLDER

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Mealie
+APP_NAME="mealie"
+APP_DESCRIPTION="Self-hosted recipe manager and meal planner with URL import and household management"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="MEALIE_PORT"
+APP_DEFAULT_HOST_PORT="9000"
+APP_SERVICE_PORT="9000"
+APP_DEFAULT_SUBDOMAIN="recipes"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="ghcr.io/mealie-recipes/mealie:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/mealie.yml"
+APP_APPDATA_DIR="appdata/mealie"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Mealie has built-in authentication. Default login: changeme@example.com / MyPassword. Change immediately after first login."

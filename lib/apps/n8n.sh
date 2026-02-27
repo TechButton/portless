@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: n8n
+APP_NAME="n8n"
+APP_DESCRIPTION="Node-based workflow automation with 400+ integrations and native AI agent support"
+APP_CATEGORY="automation"
+APP_PORT_VAR="N8N_PORT"
+APP_DEFAULT_HOST_PORT="5678"
+APP_SERVICE_PORT="5678"
+APP_DEFAULT_SUBDOMAIN="n8n"
+APP_AUTH="none"
+APP_PROFILES="automation,all"
+APP_IMAGE="n8nio/n8n:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/n8n.yml"
+APP_APPDATA_DIR="appdata/n8n"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="n8n uses SQLite by default — no separate database needed. Has built-in authentication. Set N8N_HOST and WEBHOOK_URL environment variables to your public subdomain for webhooks to work correctly."

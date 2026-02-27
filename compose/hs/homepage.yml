@@ -1,0 +1,24 @@
+services:
+  # Homepage - Customizable Dashboard
+  # https://github.com/gethomepage/homepage
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["dashboard", "all"]
+    networks:
+      - default
+      - socket_proxy
+    ports:
+      - "$HOMEPAGE_PORT:3000"
+    volumes:
+      - $DOCKERDIR/appdata/homepage:/app/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      HOMEPAGE_ALLOWED_HOSTS: "homepage.${DOMAINNAME_1}"
+    # DOCKER-LABELS-PLACEHOLDER

@@ -1,0 +1,22 @@
+services:
+  # Arrmate - AI companion for the *arr stack
+  # Natural language interface for Sonarr, Radarr, Lidarr, Plex, and more
+  # https://github.com/TechButton/Arrmate
+  arrmate:
+    image: techbutton/arrmate:latest
+    container_name: arrmate
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["management", "all"]
+    networks:
+      - default
+    ports:
+      - "$ARRMATE_PORT:8000"
+    volumes:
+      - $DOCKERDIR/appdata/arrmate:/app/data
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: Prowlarr
+APP_NAME="prowlarr"
+APP_DESCRIPTION="Indexer manager — manages torrent and Usenet indexers for *arr apps"
+APP_CATEGORY="arr"
+APP_PORT_VAR="PROWLARR_PORT"
+APP_DEFAULT_HOST_PORT="9696"
+APP_SERVICE_PORT="9696"
+APP_DEFAULT_SUBDOMAIN="indexers"
+APP_AUTH="none"
+APP_PROFILES="arr,starr,all"
+APP_IMAGE="lscr.io/linuxserver/prowlarr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/prowlarr.yml"
+APP_APPDATA_DIR="appdata/prowlarr"
+APP_REQUIRES_VOLUMES="appdata"

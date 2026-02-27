@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Kavita
+APP_NAME="kavita"
+APP_DESCRIPTION="Fast cross-platform reading server for manga, comics, EPUB, and PDF"
+APP_CATEGORY="media"
+APP_PORT_VAR="KAVITA_PORT"
+APP_DEFAULT_HOST_PORT="5000"
+APP_SERVICE_PORT="5000"
+APP_DEFAULT_SUBDOMAIN="books"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="jvmilazz0/kavita:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/kavita.yml"
+APP_APPDATA_DIR="appdata/kavita"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Kavita has built-in authentication. Point your library directories at your manga/ebook folders in the server settings."

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Homarr
+APP_NAME="homarr"
+APP_DESCRIPTION="Modern drag-and-drop dashboard with 30+ integrations, built-in auth, and 10,000+ icons"
+APP_CATEGORY="dashboard"
+APP_PORT_VAR="HOMARR_PORT"
+APP_DEFAULT_HOST_PORT="7575"
+APP_SERVICE_PORT="7575"
+APP_DEFAULT_SUBDOMAIN="home"
+APP_AUTH="none"
+APP_PROFILES="dashboard,all"
+APP_IMAGE="ghcr.io/homarr-labs/homarr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/homarr.yml"
+APP_APPDATA_DIR="appdata/homarr"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Homarr has built-in authentication. Set up your admin account on first login."

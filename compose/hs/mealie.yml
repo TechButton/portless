@@ -1,0 +1,25 @@
+services:
+  # Mealie - Recipe Manager & Meal Planner
+  # https://github.com/mealie-recipes/mealie
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:latest
+    container_name: mealie
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    ports:
+      - "$MEALIE_PORT:9000"
+    volumes:
+      - $DOCKERDIR/appdata/mealie:/app/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      BASE_URL: "https://recipes.${DOMAINNAME_1}"
+      DEFAULT_EMAIL: "admin@example.com"
+      DEFAULT_PASSWORD: "MyPassword"   # Change on first login
+    # DOCKER-LABELS-PLACEHOLDER

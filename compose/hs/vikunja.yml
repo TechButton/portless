@@ -1,0 +1,22 @@
+services:
+  # Vikunja - To-do & Project Manager
+  # https://github.com/go-vikunja/vikunja
+  vikunja:
+    image: vikunja/vikunja:latest
+    container_name: vikunja
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["productivity", "all"]
+    networks:
+      - default
+    ports:
+      - "$VIKUNJA_PORT:3456"
+    volumes:
+      - $DOCKERDIR/appdata/vikunja:/app/vikunja/files
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      VIKUNJA_SERVICE_PUBLICURL: "https://tasks.${DOMAINNAME_1}"
+      VIKUNJA_DATABASE_TYPE: "sqlite"
+    # DOCKER-LABELS-PLACEHOLDER

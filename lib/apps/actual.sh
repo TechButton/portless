@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Actual Budget
+APP_NAME="actual"
+APP_DESCRIPTION="Local-first personal budgeting app using the envelope method — privacy-first Mint/YNAB alternative"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="ACTUAL_PORT"
+APP_DEFAULT_HOST_PORT="5006"
+APP_SERVICE_PORT="5006"
+APP_DEFAULT_SUBDOMAIN="budget"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="actualbudget/actual-server:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/actual.yml"
+APP_APPDATA_DIR="appdata/actual"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Actual Budget stores all data locally — no cloud sync unless you configure it. Has optional password protection on the server. Use the web UI or the Actual desktop/mobile apps to connect."

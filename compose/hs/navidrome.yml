@@ -1,0 +1,26 @@
+services:
+  # Navidrome - Music Streaming Server
+  # https://github.com/navidrome/navidrome
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    ports:
+      - "$NAVIDROME_PORT:4533"
+    volumes:
+      - $DOCKERDIR/appdata/navidrome:/data
+      # Map your music library (read-only recommended):
+      # - /path/to/music:/music:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      ND_SCANSCHEDULE: "1h"
+      ND_LOGLEVEL: "info"
+      ND_SESSIONTIMEOUT: "24h"
+      ND_BASEURL: ""
+    # DOCKER-LABELS-PLACEHOLDER

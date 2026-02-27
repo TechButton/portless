@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Overseerr
+APP_NAME="overseerr"
+APP_DESCRIPTION="Media request management — lets users request movies and TV shows"
+APP_CATEGORY="requests"
+APP_PORT_VAR="OVERSEERR_PORT"
+APP_DEFAULT_HOST_PORT="5055"
+APP_SERVICE_PORT="5055"
+APP_DEFAULT_SUBDOMAIN="requests"
+APP_AUTH="none"
+APP_PROFILES="requests,all"
+APP_IMAGE="lscr.io/linuxserver/overseerr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/overseerr.yml"
+APP_APPDATA_DIR="appdata/overseerr"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Overseerr has built-in Plex SSO — no additional auth middleware needed."

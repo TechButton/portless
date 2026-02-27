@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: Stirling PDF
+APP_NAME="stirling-pdf"
+APP_DESCRIPTION="PDF toolkit — merge, split, convert, OCR, and manipulate PDFs"
+APP_CATEGORY="other"
+APP_PORT_VAR="STIRLINGPDF_PORT"
+APP_DEFAULT_HOST_PORT="8083"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="pdf"
+APP_AUTH="none"
+APP_PROFILES="other,all"
+APP_IMAGE="frooodle/s-pdf:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/stirling-pdf.yml"
+APP_APPDATA_DIR="appdata/stirling-pdf"
+APP_REQUIRES_VOLUMES="appdata"

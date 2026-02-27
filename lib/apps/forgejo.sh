@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Forgejo
+APP_NAME="forgejo"
+APP_DESCRIPTION="Lightweight self-hosted Git service with a GitHub-like interface — community-driven Gitea fork"
+APP_CATEGORY="development"
+APP_PORT_VAR="FORGEJO_PORT"
+APP_DEFAULT_HOST_PORT="3030"
+APP_SERVICE_PORT="3000"
+APP_DEFAULT_SUBDOMAIN="git"
+APP_AUTH="none"
+APP_PROFILES="development,all"
+APP_IMAGE="codeberg.org/forgejo/forgejo:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/forgejo.yml"
+APP_APPDATA_DIR="appdata/forgejo"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Forgejo has built-in authentication. Complete the install wizard at /install on first launch. SSH is available on port 222 (mapped to host 222)."

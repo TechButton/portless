@@ -1,0 +1,23 @@
+services:
+  # Kometa - Automatic Metadata Manager for Plex (formerly Plex Meta Manager)
+  kometa:
+    image: lscr.io/linuxserver/kometa:latest
+    container_name: kometa
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    volumes:
+      - $DOCKERDIR/appdata/kometa:/config
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      KOMETA_CONFIG: /config/config.yml #optional
+      KOMETA_TIME: 03:00 #optional
+      KOMETA_RUN: True #optional
+      KOMETA_TEST: False #optional
+      KOMETA_NO_MISSING: False #optional
+    # DOCKER-LABELS-PLACEHOLDER

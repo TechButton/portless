@@ -1,0 +1,14 @@
+services:
+  # IT-Tools - Collection of handy online tools for developers
+  it-tools:
+    image: corentinth/it-tools
+    container_name: it-tools
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["apps", "all"]
+    networks:
+      - default
+    ports:
+      - "$ITTOOLS_PORT:80"
+    # DOCKER-LABELS-PLACEHOLDER

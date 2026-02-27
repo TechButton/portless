@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Gotify
+APP_NAME="gotify"
+APP_DESCRIPTION="Simple self-hosted push notification server — send alerts from scripts, apps, and services"
+APP_CATEGORY="monitoring"
+APP_PORT_VAR="GOTIFY_PORT"
+APP_DEFAULT_HOST_PORT="8084"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="notify"
+APP_AUTH="none"
+APP_PROFILES="monitoring,all"
+APP_IMAGE="gotify/server:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/gotify.yml"
+APP_APPDATA_DIR="appdata/gotify"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Gotify has built-in authentication. Default login: admin / admin — change immediately. Use the REST API or Gotify Android/iOS app to receive push notifications."

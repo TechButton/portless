@@ -1,0 +1,25 @@
+services:
+  # Grafana - Metrics Dashboard & Visualization
+  # https://github.com/grafana/grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["monitoring", "all"]
+    networks:
+      - default
+    ports:
+      - "$GRAFANA_PORT:3000"
+    volumes:
+      - $DOCKERDIR/appdata/grafana:/var/lib/grafana
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-changeme}
+      GF_SERVER_ROOT_URL: "https://grafana.${DOMAINNAME_1}"
+      GF_INSTALL_PLUGINS: ""
+    user: "$PUID:$PGID"
+    # DOCKER-LABELS-PLACEHOLDER

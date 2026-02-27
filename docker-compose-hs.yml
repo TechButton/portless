@@ -1,0 +1,72 @@
+########################### NETWORKS
+# You may customize the network subnets (192.168.x.0/24) below as you please.
+networks:
+  default:
+    driver: bridge
+  socket_proxy:
+    name: socket_proxy
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.91.0/24
+  t3_proxy:
+    name: t3_proxy
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.90.0/24
+
+########################### SECRETS
+secrets:
+  basic_auth_credentials:
+    file: $DOCKERDIR/secrets/basic_auth_credentials
+  cf_dns_api_token:
+    file: $DOCKERDIR/secrets/cf_dns_api_token
+  tinyauth_secret:
+    file: $DOCKERDIR/secrets/tinyauth_secret
+  plex_claim:
+    file: $DOCKERDIR/secrets/plex_claim
+
+include:
+  ########################### SERVICES
+  # HOSTNAME defined in .env file
+
+  # Core
+  - compose/$HOSTNAME/socket-proxy.yml
+  - compose/$HOSTNAME/traefik.yml
+
+  # Media servers
+  - compose/$HOSTNAME/plex.yml
+  - compose/$HOSTNAME/jellyfin.yml
+  - compose/$HOSTNAME/overseerr.yml
+
+  # *Arr stack
+  - compose/$HOSTNAME/sonarr.yml
+  - compose/$HOSTNAME/radarr.yml
+  - compose/$HOSTNAME/lidarr.yml
+  - compose/$HOSTNAME/bazarr.yml
+  - compose/$HOSTNAME/prowlarr.yml
+
+  # Downloads (VPN)
+  - compose/$HOSTNAME/gluetun.yml
+  - compose/$HOSTNAME/qbittorrent-vpn.yml
+  - compose/$HOSTNAME/sabnzbd.yml
+
+  # Management
+  - compose/$HOSTNAME/portainer.yml
+  - compose/$HOSTNAME/vscode.yml
+  - compose/$HOSTNAME/dozzle.yml
+  - compose/$HOSTNAME/wud.yml
+  - compose/$HOSTNAME/uptime-kuma.yml
+  - compose/$HOSTNAME/it-tools.yml
+  - compose/$HOSTNAME/glances.yml
+  - compose/$HOSTNAME/docker-gc.yml
+  - compose/$HOSTNAME/deunhealth.yml
+
+  # Media tools / metadata
+  - compose/$HOSTNAME/kometa.yml
+  - compose/$HOSTNAME/maintainerr.yml
+  - compose/$HOSTNAME/notifiarr.yml
+
+  # Other
+  - compose/$HOSTNAME/stirling-pdf.yml

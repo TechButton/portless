@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: CrowdSec
+APP_NAME="crowdsec"
+APP_DESCRIPTION="Intrusion prevention — community-powered threat detection for Traefik"
+APP_CATEGORY="security"
+APP_PORT_VAR=""
+APP_DEFAULT_HOST_PORT=""
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN=""
+APP_AUTH="none"
+APP_PROFILES="security,all"
+APP_IMAGE="crowdsecurity/crowdsec:latest"
+APP_COMPOSE_FILE=""
+APP_APPDATA_DIR="appdata/crowdsec"
+APP_REQUIRES_VOLUMES="appdata,logs"
+APP_NOTES="CrowdSec watches Traefik access logs and blocks malicious IPs automatically. After deploy, generate the bouncer API key: ./manage.sh security crowdsec-setup"

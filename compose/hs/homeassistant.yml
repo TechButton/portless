@@ -1,0 +1,23 @@
+services:
+  # Home Assistant - Home Automation
+  # https://github.com/home-assistant/core
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    # network_mode: host is recommended for local device discovery (mDNS, UPnP, Zigbee)
+    # If using host mode, remove the ports and networks sections below
+    network_mode: host
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["automation", "all"]
+    privileged: true
+    volumes:
+      - $DOCKERDIR/appdata/homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    environment:
+      TZ: $TZ
+    # NOTE: With network_mode: host, Traefik cannot proxy this container via Docker labels.
+    # Add a manual Traefik rule pointing to http://${SERVER_IP}:8123
+    # DOCKER-LABELS-PLACEHOLDER

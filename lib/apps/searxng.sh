@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: SearXNG
+APP_NAME="searxng"
+APP_DESCRIPTION="Privacy-respecting self-hosted metasearch engine — aggregates results from 70+ sources"
+APP_CATEGORY="network"
+APP_PORT_VAR="SEARXNG_PORT"
+APP_DEFAULT_HOST_PORT="8085"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="search"
+APP_AUTH="tinyauth"
+APP_PROFILES="network,all"
+APP_IMAGE="searxng/searxng:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/searxng.yml"
+APP_APPDATA_DIR="appdata/searxng"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="SearXNG has no built-in auth — TinyAuth is recommended. Place your settings.yml in appdata/searxng/ to configure engines and appearance."

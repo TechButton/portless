@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Arrmate
+APP_NAME="arrmate"
+APP_DESCRIPTION="AI companion for your *arr stack — manage Sonarr, Radarr, Lidarr, and more with natural language"
+APP_CATEGORY="management"
+APP_PORT_VAR="ARRMATE_PORT"
+APP_DEFAULT_HOST_PORT="8000"
+APP_SERVICE_PORT="8000"
+APP_DEFAULT_SUBDOMAIN="arrmate"
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="techbutton/arrmate:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/arrmate.yml"
+APP_APPDATA_DIR="appdata/arrmate"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Arrmate has built-in multi-user auth (admin/power_user/user roles). Default login: admin / changeme123 — change on first boot. Supports Ollama (local), OpenAI, and Anthropic as LLM backends."

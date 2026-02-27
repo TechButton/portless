@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Linkding
+APP_NAME="linkding"
+APP_DESCRIPTION="Minimal, fast self-hosted bookmark manager with tagging, search, and browser extensions"
+APP_CATEGORY="productivity"
+APP_PORT_VAR="LINKDING_PORT"
+APP_DEFAULT_HOST_PORT="9090"
+APP_SERVICE_PORT="9090"
+APP_DEFAULT_SUBDOMAIN="links"
+APP_AUTH="none"
+APP_PROFILES="productivity,all"
+APP_IMAGE="sissbruecker/linkding:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/linkding.yml"
+APP_APPDATA_DIR="appdata/linkding"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Linkding has built-in authentication. Create your admin account on first boot via: docker exec -it linkding python manage.py createsuperuser"

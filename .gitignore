@@ -1,0 +1,19 @@
+# State file — contains secrets, never commit
+.homelab-state.json
+
+# Generated .env — contains credentials
+.env
+*.env
+
+# Install log
+/tmp/homelab-*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

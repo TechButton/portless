@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: IT-Tools
+APP_NAME="it-tools"
+APP_DESCRIPTION="Developer & IT toolbox — useful utilities (UUID gen, encoders, converters, etc.)"
+APP_CATEGORY="management"
+APP_PORT_VAR="ITTOOLS_PORT"
+APP_DEFAULT_HOST_PORT="8082"
+APP_SERVICE_PORT="80"
+APP_DEFAULT_SUBDOMAIN="tools"
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="corentinth/it-tools:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/it-tools.yml"
+APP_APPDATA_DIR=""
+APP_REQUIRES_VOLUMES=""

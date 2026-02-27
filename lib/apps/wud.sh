@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: What's Up Docker (WUD)
+APP_NAME="wud"
+APP_DESCRIPTION="Container update notifier — alerts you when new Docker image versions are available"
+APP_CATEGORY="management"
+APP_PORT_VAR="WUD_PORT"
+APP_DEFAULT_HOST_PORT="3000"
+APP_SERVICE_PORT="3000"
+APP_DEFAULT_SUBDOMAIN="updates"
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="fmartinou/whats-up-docker:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/wud.yml"
+APP_APPDATA_DIR="appdata/wud"
+APP_REQUIRES_VOLUMES="appdata,/var/run/docker.sock"

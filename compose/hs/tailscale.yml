@@ -1,0 +1,32 @@
+services:
+  # ─── Tailscale ────────────────────────────────────────────────────────────
+  # WireGuard mesh VPN — private access from any enrolled device.
+  # Services accessible at Tailscale IP (100.x.x.x) or MagicDNS hostname.
+  # Subnet routing advertises Docker networks so peers can reach containers.
+  #
+  # Enroll devices: https://tailscale.com/download
+  # Admin console:  https://login.tailscale.com/admin/machines
+  # Approve routes: Machines → this server → Edit route settings
+  #
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    restart: unless-stopped
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_ACCEPT_DNS=false
+    volumes:
+      - ${DOCKERDIR}/appdata/tailscale:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    networks:
+      - t3_proxy
+      - socket_proxy
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"

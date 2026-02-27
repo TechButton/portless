@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Jellyseerr
+APP_NAME="jellyseerr"
+APP_DESCRIPTION="Media request management for Jellyfin (and Plex) — fork of Overseerr with Jellyfin SSO support"
+APP_CATEGORY="requests"
+APP_PORT_VAR="JELLYSEERR_PORT"
+APP_DEFAULT_HOST_PORT="5056"
+APP_SERVICE_PORT="5055"
+APP_DEFAULT_SUBDOMAIN="requests"
+APP_AUTH="none"
+APP_PROFILES="requests,all"
+APP_IMAGE="fallenbagel/jellyseerr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/jellyseerr.yml"
+APP_APPDATA_DIR="appdata/jellyseerr"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Jellyseerr has built-in Jellyfin SSO — users log in with their Jellyfin credentials. Use this instead of Overseerr if you run Jellyfin."

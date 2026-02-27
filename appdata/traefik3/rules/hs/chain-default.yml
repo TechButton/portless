@@ -1,0 +1,10 @@
+# chain-default is an alias for the selected auth system: tinyauth
+# Swap this to chain-tinyauth or chain-basic-auth to change auth for all apps at once.
+http:
+  middlewares:
+    chain-default:
+      chain:
+        middlewares:
+          - middlewares-rate-limit
+          - middlewares-secure-headers
+          - middlewares-tinyauth

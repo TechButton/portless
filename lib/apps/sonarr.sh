@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: Sonarr
+APP_NAME="sonarr"
+APP_DESCRIPTION="TV series collection manager — finds, downloads, and organizes TV shows"
+APP_CATEGORY="arr"
+APP_PORT_VAR="SONARR_PORT"
+APP_DEFAULT_HOST_PORT="8989"
+APP_SERVICE_PORT="8989"
+APP_DEFAULT_SUBDOMAIN="tv"
+APP_AUTH="none"
+APP_PROFILES="arr,starr,all"
+APP_IMAGE="lscr.io/linuxserver/sonarr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/sonarr.yml"
+APP_APPDATA_DIR="appdata/sonarr"
+APP_REQUIRES_VOLUMES="appdata,data"

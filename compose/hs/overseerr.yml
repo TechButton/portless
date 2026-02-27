@@ -1,0 +1,20 @@
+services:
+  # Overseerr - Media Request Management
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "requests", "all"]
+    networks:
+      - default
+    ports:
+      - "$OVERSEERR_PORT:5055"
+    volumes:
+      - $DOCKERDIR/appdata/overseerr:/config
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER

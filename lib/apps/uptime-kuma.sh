@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Uptime Kuma
+APP_NAME="uptime-kuma"
+APP_DESCRIPTION="Self-hosted uptime monitor — tracks availability of services and sends alerts"
+APP_CATEGORY="management"
+APP_PORT_VAR="UPTIMEKUMA_PORT"
+APP_DEFAULT_HOST_PORT="3001"
+APP_SERVICE_PORT="3001"
+APP_DEFAULT_SUBDOMAIN="status"
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="louislam/uptime-kuma:1"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/uptime-kuma.yml"
+APP_APPDATA_DIR="appdata/uptime-kuma"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Uptime Kuma has its own login system."

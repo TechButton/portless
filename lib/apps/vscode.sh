@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: VS Code Server (code-server)
+APP_NAME="vscode"
+APP_DESCRIPTION="VS Code in the browser — edit files and configs from any device"
+APP_CATEGORY="management"
+APP_PORT_VAR="VSCODE_PORT"
+APP_DEFAULT_HOST_PORT="8443"
+APP_SERVICE_PORT="8443"
+APP_DEFAULT_SUBDOMAIN="code"
+APP_AUTH="none"
+APP_PROFILES="management,all"
+APP_IMAGE="lscr.io/linuxserver/code-server:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/vscode.yml"
+APP_APPDATA_DIR="appdata/vscode"
+APP_REQUIRES_VOLUMES="appdata"

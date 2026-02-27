@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: SABnzbd
+APP_NAME="sabnzbd"
+APP_DESCRIPTION="Usenet downloader — fast, easy-to-use binary newsreader"
+APP_CATEGORY="downloads"
+APP_PORT_VAR="SABNZBD_PORT"
+APP_DEFAULT_HOST_PORT="8080"
+APP_SERVICE_PORT="8080"
+APP_DEFAULT_SUBDOMAIN="sabnzbd"
+APP_AUTH="none"
+APP_PROFILES="downloads,all"
+APP_IMAGE="lscr.io/linuxserver/sabnzbd:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/sabnzbd.yml"
+APP_APPDATA_DIR="appdata/sabnzbd"
+APP_REQUIRES_VOLUMES="appdata,data"

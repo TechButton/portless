@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# App catalog: Maintainerr
+APP_NAME="maintainerr"
+APP_DESCRIPTION="Media library maintainer — auto-removes stale media based on custom rules"
+APP_CATEGORY="other"
+APP_PORT_VAR="MAINTAINERR_PORT"
+APP_DEFAULT_HOST_PORT="6246"
+APP_SERVICE_PORT="6246"
+APP_DEFAULT_SUBDOMAIN="maintainerr"
+APP_AUTH="none"
+APP_PROFILES="other,all"
+APP_IMAGE="ghcr.io/jorenn92/maintainerr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/maintainerr.yml"
+APP_APPDATA_DIR="appdata/maintainerr"
+APP_REQUIRES_VOLUMES="appdata"

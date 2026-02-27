@@ -1,0 +1,28 @@
+services:
+  # Jellyfin - Media Server (open-source Plex alternative)
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    user: $PUID:$PGID
+    devices:
+      - /dev/dri:/dev/dri # for hardware transcoding
+    ports:
+      - "$JELLYFIN_PORT:8096"
+      # - "8920:8920" # Emby also uses same port if running both
+    environment:
+      UMASK_SET: 022
+      TZ: $TZ
+    volumes:
+      - $DOCKERDIR/appdata/jellyfin:/config
+      - $DOWNLOADSDIR:/data/downloads
+      - $MEDIADIR1:/data/media1
+      - $MEDIADIR2:/data/media2
+      # - $MEDIADIR3:/data/media3
+      - /dev/shm:/data/transcode # Offload transcoding to RAM if you have enough RAM
+    # DOCKER-LABELS-PLACEHOLDER
