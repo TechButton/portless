@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>portless — self-hosted media stack, zero port forwarding</title>
+  <meta name="description" content="An interactive setup wizard for a self-hosted media stack. Wildcard HTTPS, single sign-on, and remote access — without touching your router." />
+  <meta property="og:title" content="portless" />
+  <meta property="og:description" content="Self-hosted media stack. No ports. No exposed IP. No router changes." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://portless.info/preview.svg" />
+  <meta property="og:url" content="https://portless.info/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://portless.info/preview.svg" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔒</text></svg>" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --surface2:  #1c2128;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --blue:      #58a6ff;
+      --green:     #3fb950;
+      --yellow:    #d29922;
+      --purple:    #bc8cff;
+      --radius:    8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Layout ── */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Nav ── */
+    nav {
+      border-bottom: 1px solid var(--border);
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      background: rgba(13,17,23,0.92);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+    nav .inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .nav-logo { font-weight: 700; font-size: 1.1rem; color: var(--text); letter-spacing: -0.5px; }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { color: var(--muted); font-size: 0.9rem; }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    /* ── Hero ── */
+    .hero { padding: 96px 0 80px; text-align: center; }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(56,139,253,0.15);
+      border: 1px solid rgba(56,139,253,0.4);
+      color: var(--blue);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+    .hero h1 span { color: var(--blue); }
+    .hero p { font-size: 1.15rem; color: var(--muted); max-width: 600px; margin: 0 auto 36px; }
+    .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .btn:hover { opacity: 0.85; text-decoration: none; transform: translateY(-1px); }
+    .btn-primary { background: var(--blue); color: #0d1117; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+    /* ── Terminal snippet ── */
+    .terminal {
+      margin: 56px auto 0;
+      max-width: 540px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      text-align: left;
+    }
+    .terminal-bar {
+      background: var(--surface2);
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red    { background: #ff5f57; }
+    .dot-yellow { background: #febc2e; }
+    .dot-green  { background: #28c840; }
+    .terminal-body { padding: 20px 24px; }
+    .terminal-body pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre;
+    }
+    .cmd { color: var(--green); }
+    .cmt { color: var(--muted); }
+
+    /* ── Preview image ── */
+    .preview-wrap {
+      margin-top: 48px;
+    }
+    .preview-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .preview-wrap img {
+      width: 100%;
+      max-width: 900px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* ── Section ── */
+    section { padding: 80px 0; }
+    section + section { border-top: 1px solid var(--border); }
+    .section-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .section-heading {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+    .section-sub { color: var(--muted); max-width: 560px; margin-bottom: 48px; }
+
+    /* ── Feature grid ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: var(--blue); }
+    .feature-icon { font-size: 1.5rem; margin-bottom: 12px; display: block; }
+    .feature-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+    .feature-card p  { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+
+    /* ── Access table ── */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; background: var(--surface2); }
+    tr:last-child td { border-bottom: none; }
+    .yes  { color: var(--green); font-weight: 600; }
+    .no   { color: var(--muted); }
+    .note { color: var(--yellow); font-size: 0.82rem; }
+
+    /* ── Apps grid ── */
+    .apps-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+    .app-cat-label {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .app-group { margin-bottom: 28px; }
+    .app-tag {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .app-tag:hover { color: var(--text); border-color: var(--blue); }
+    .app-tag.highlight { border-color: var(--purple); color: var(--purple); }
+
+    /* ── Docs links ── */
+    .docs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+    .doc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+    .doc-card:hover { border-color: var(--blue); text-decoration: none; }
+    .doc-card h3 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .doc-card p  { font-size: 0.83rem; color: var(--muted); }
+
+    /* ── Support ── */
+    .support-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 40px 32px;
+      text-align: center;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+    .support-box h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; }
+    .support-box p  { color: var(--muted); margin-bottom: 24px; }
+    .bmc-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #FFDD00;
+      color: #000;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 12px 24px;
+      border-radius: var(--radius);
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .bmc-btn:hover { opacity: 0.9; text-decoration: none; transform: translateY(-1px); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+    .footer-links { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .hero { padding: 64px 0 56px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <div class="inner">
+    <span class="nav-logo">portless</span>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#access">Remote Access</a>
+      <a href="#apps">Apps</a>
+      <a href="#docs">Docs</a>
+      <a href="https://github.com/techbutton/portless">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<div class="hero container">
+  <div class="hero-badge">Open Source &middot; MIT License</div>
+  <h1>Self-hosted media stack.<br><span>Zero port forwarding.</span></h1>
+  <p>Run one command. Get wildcard HTTPS, single sign-on, and remote access for every service &mdash; without touching your router or exposing your home IP.</p>
+  <div class="btn-group">
+    <a href="https://github.com/techbutton/portless#quick-start" class="btn btn-primary">Get Started &rarr;</a>
+    <a href="https://github.com/techbutton/portless" class="btn btn-outline">View on GitHub</a>
+  </div>
+
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+    </div>
+    <div class="terminal-body">
+      <pre><span class="cmt"># clone and run the wizard</span>
+<span class="cmd">$</span> git clone https://github.com/techbutton/portless.git
+<span class="cmd">$</span> cd portless
+<span class="cmd">$</span> chmod +x install.sh manage.sh
+<span class="cmd">$</span> ./install.sh
+
+<span class="cmt">  ══ portless Setup Wizard ══
+  Phase 1: System check  ✔
+  Phase 2: Basic config  ✔
+  Phase 3: Domain &amp; TLS  ✔
+  Phase 4: Select apps   ✔
+  Phase 5: Remote access ✔
+  Phase 6: Deploy        ✔</span></pre>
+    </div>
+  </div>
+
+  <div class="preview-wrap">
+    <p class="preview-label">Preview</p>
+    <img src="preview.svg" alt="portless stack preview — install flow, service cards, and architecture diagram" />
+  </div>
+</div>
+
+<!-- ── Features ── -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Why portless</div>
+    <div class="section-heading">Everything set up by the wizard</div>
+    <p class="section-sub">The installer walks through six phases and handles all the plumbing &mdash; DNS, certs, auth, routing, and remote access.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="feature-icon">🔒</span>
+        <h3>Wildcard TLS &mdash; automatic</h3>
+        <p>Traefik handles Let's Encrypt DNS-01 challenges via Cloudflare. Every service gets a valid cert on first boot.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🗝️</span>
+        <h3>Single sign-on</h3>
+        <p>TinyAuth sits in front of every app as a Traefik ForwardAuth middleware. One login, optional 2FA, covers the whole stack.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🌐</span>
+        <h3>No open ports</h3>
+        <p>Your home server only makes outbound connections. Cloudflare Tunnel, Pangolin, Tailscale, Headscale, and Netbird all work without DDNS or port rules.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🛡️</span>
+        <h3>Edge protection</h3>
+        <p>CrowdSec runs on your VPS where real attacker IPs are visible. Community threat intelligence blocks bad actors before they reach home.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📦</span>
+        <h3>40+ apps included</h3>
+        <p>Media, downloads, dashboards, books, music, passwords, recipes, finance, automation, monitoring &mdash; all pre-wired with Traefik rules.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">⚙️</span>
+        <h3>manage.sh CLI</h3>
+        <p>Add apps, update images, switch tunnel methods, and manage auth &mdash; all from a single command.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Remote Access ── -->
+<section id="access">
+  <div class="container">
+    <div class="section-label">Remote Access</div>
+    <div class="section-heading">Five ways to reach your stack</div>
+    <p class="section-sub">Pick the method that fits your situation. Switch any time with <code style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:0.85em">./manage.sh tunnel setup</code>.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Cost</th>
+            <th>Public URLs</th>
+            <th>VPS needed</th>
+            <th>Works with CGNAT</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Cloudflare Tunnel</strong></td>
+            <td class="yes">Free</td>
+            <td class="yes">Yes</td>
+            <td class="no">No</td>
+            <td class="yes">Yes</td>
+          </tr>
+          <tr>
+            <td><strong>Pangolin</strong></td>
+            <td class="note">~$18/yr VPS</td>
+            <td class="yes">Yes</td>
+            <td class="note">Yes</td>
+            <td class="yes">Yes</td>
+          </tr>
+          <tr>
+            <td><strong>Tailscale</strong></td>
+            <td class="yes">Free</td>
+            <td class="no">Private only</td>
+            <td class="no">No</td>
+            <td class="yes">Yes</td>
+          </tr>
+          <tr>
+            <td><strong>Headscale</strong></td>
+            <td class="note">~$18/yr VPS</td>
+            <td class="no">Private only</td>
+            <td class="note">Yes</td>
+            <td class="yes">Yes</td>
+          </tr>
+          <tr>
+            <td><strong>Netbird</strong></td>
+            <td class="yes">Free</td>
+            <td class="no">Private only</td>
+            <td class="no">No (cloud)</td>
+            <td class="yes">Yes</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── Apps ── -->
+<section id="apps">
+  <div class="container">
+    <div class="section-label">Included apps</div>
+    <div class="section-heading">40+ apps, pick what you need</div>
+    <p class="section-sub">Select during install or add any time with <code style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:0.85em">./manage.sh add &lt;app&gt;</code>. Every app gets a Traefik rule, auth middleware, and optional tunnel exposure &mdash; automatically.</p>
+
+    <div class="app-group">
+      <p class="app-cat-label">Media</p>
+      <div class="apps-grid">
+        <span class="app-tag">Plex</span>
+        <span class="app-tag">Jellyfin</span>
+        <span class="app-tag">Radarr</span>
+        <span class="app-tag">Sonarr</span>
+        <span class="app-tag">Lidarr</span>
+        <span class="app-tag">Bazarr</span>
+        <span class="app-tag">Prowlarr</span>
+        <span class="app-tag">Overseerr</span>
+        <span class="app-tag">Jellyseerr</span>
+        <span class="app-tag">Maintainerr</span>
+        <span class="app-tag">Kometa</span>
+      </div>
+    </div>
+    <div class="app-group">
+      <p class="app-cat-label">Books, Music &amp; Audio</p>
+      <div class="apps-grid">
+        <span class="app-tag">Audiobookshelf</span>
+        <span class="app-tag">Kavita</span>
+        <span class="app-tag">Calibre-Web</span>
+        <span class="app-tag">Navidrome</span>
+      </div>
+    </div>
+    <div class="app-group">
+      <p class="app-cat-label">Downloads</p>
+      <div class="apps-grid">
+        <span class="app-tag">qBittorrent + Gluetun VPN</span>
+        <span class="app-tag">SABnzbd</span>
+      </div>
+    </div>
+    <div class="app-group">
+      <p class="app-cat-label">Dashboards</p>
+      <div class="apps-grid">
+        <span class="app-tag">Homepage</span>
+        <span class="app-tag">Homarr</span>
+      </div>
+    </div>
+    <div class="app-group">
+      <p class="app-cat-label">Management &amp; Monitoring</p>
+      <div class="apps-grid">
+        <span class="app-tag">Portainer</span>
+        <span class="app-tag">Dozzle</span>
+        <span class="app-tag">Uptime Kuma</span>
+        <span class="app-tag">What's Up Docker</span>
+        <span class="app-tag">Glances</span>
+        <span class="app-tag">Grafana</span>
+        <span class="app-tag">Gotify</span>
+        <span class="app-tag">Notifiarr</span>
+        <span class="app-tag">deunhealth</span>
+      </div>
+    </div>
+    <div class="app-group">
+      <p class="app-cat-label">Productivity</p>
+      <div class="apps-grid">
+        <span class="app-tag">Mealie</span>
+        <span class="app-tag">Linkding</span>
+        <span class="app-tag">FreshRSS</span>
+        <span class="app-tag">Vikunja</span>
+        <span class="app-tag">Actual Budget</span>
+      </div>
+    </div>
+    <div class="app-group">
+      <p class="app-cat-label">Automation &amp; Development</p>
+      <div class="apps-grid">
+        <span class="app-tag">n8n</span>
+        <span class="app-tag">Home Assistant</span>
+        <span class="app-tag">Forgejo</span>
+      </div>
+    </div>
+    <div class="app-group">
+      <p class="app-cat-label">Security</p>
+      <div class="apps-grid">
+        <span class="app-tag">Vaultwarden</span>
+        <span class="app-tag">TinyAuth SSO</span>
+        <span class="app-tag">CrowdSec</span>
+      </div>
+    </div>
+    <div class="app-group">
+      <p class="app-cat-label">Search &amp; Network</p>
+      <div class="apps-grid">
+        <span class="app-tag">SearXNG</span>
+        <span class="app-tag">Whoogle</span>
+      </div>
+    </div>
+    <div class="app-group" style="margin-bottom:0">
+      <p class="app-cat-label">Utilities</p>
+      <div class="apps-grid">
+        <span class="app-tag">VS Code (code-server)</span>
+        <span class="app-tag">IT Tools</span>
+        <span class="app-tag">Stirling PDF</span>
+        <span class="app-tag highlight">Arrmate ✨</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Docs ── -->
+<section id="docs">
+  <div class="container">
+    <div class="section-label">Documentation</div>
+    <div class="section-heading">Guides</div>
+    <p class="section-sub">Everything you need to install, configure, and extend portless.</p>
+
+    <div class="docs-grid">
+      <a href="https://github.com/techbutton/portless/blob/main/docs/getting-started.md" class="doc-card">
+        <h3>Getting Started</h3>
+        <p>Install prerequisites, run the wizard, and access your services.</p>
+      </a>
+      <a href="https://github.com/techbutton/portless/blob/main/docs/remote-access.md" class="doc-card">
+        <h3>Remote Access Guide</h3>
+        <p>Compare all five tunnel methods and pick the right one.</p>
+      </a>
+      <a href="https://github.com/techbutton/portless/blob/main/docs/pangolin-guide.md" class="doc-card">
+        <h3>Pangolin Guide</h3>
+        <p>VPS setup, DNS config, CrowdSec, and troubleshooting.</p>
+      </a>
+      <a href="https://github.com/techbutton/portless/blob/main/docs/adding-apps.md" class="doc-card">
+        <h3>Adding Apps</h3>
+        <p>Create your own app catalog entry and compose snippet.</p>
+      </a>
+      <a href="https://github.com/techbutton/portless/blob/main/docs/troubleshooting.md" class="doc-card">
+        <h3>Troubleshooting</h3>
+        <p>Common issues with Traefik, TinyAuth, tunnels, and more.</p>
+      </a>
+      <a href="https://github.com/techbutton/portless/blob/main/docs/references.md" class="doc-card">
+        <h3>References &amp; Credits</h3>
+        <p>Every open source project that powers the stack.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Support ── -->
+<section>
+  <div class="container">
+    <div class="support-box">
+      <h2>Support the project</h2>
+      <p>portless is free and open source. If it saves you time, a coffee goes a long way.</p>
+      <a href="https://buymeacoffee.com/techbutton" class="bmc-btn">☕ Buy Me a Coffee</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="container">
+    <div>MIT License &middot; Copyright &copy; 2025 TechButton</div>
+    <div class="footer-links">
+      <a href="https://github.com/techbutton/portless">GitHub</a>
+      <a href="https://github.com/techbutton/portless/blob/main/LICENSE">License</a>
+      <a href="https://github.com/techbutton/portless/blob/main/docs/references.md">Credits</a>
+      <a href="https://github.com/techbutton/portless/issues">Issues</a>
+      <a href="https://buymeacoffee.com/techbutton">Buy Me a Coffee</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

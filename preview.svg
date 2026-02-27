@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1c2128"/>
+      <stop offset="100%" style="stop-color:#161b22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#58a6ff"/>
+      <stop offset="100%" style="stop-color:#bc8cff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle grid lines -->
+  <g stroke="#21262d" stroke-width="1" opacity="0.5">
+    <line x1="0" y1="105" x2="1200" y2="105"/>
+    <line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="0" y1="525" x2="1200" y2="525"/>
+    <line x1="240" y1="0" x2="240" y2="630"/>
+    <line x1="480" y1="0" x2="480" y2="630"/>
+    <line x1="720" y1="0" x2="720" y2="630"/>
+    <line x1="960" y1="0" x2="960" y2="630"/>
+  </g>
+
+  <!-- Left panel — terminal -->
+  <rect x="40" y="60" width="490" height="510" rx="10" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <!-- Terminal title bar -->
+  <rect x="40" y="60" width="490" height="40" rx="10" fill="#1c2128"/>
+  <rect x="40" y="80" width="490" height="20" fill="#1c2128"/>
+  <circle cx="66" cy="80" r="6" fill="#ff5f57"/>
+  <circle cx="86" cy="80" r="6" fill="#febc2e"/>
+  <circle cx="106" cy="80" r="6" fill="#28c840"/>
+  <text x="275" y="85" font-family="monospace" font-size="12" fill="#8b949e" text-anchor="middle">install.sh — portless</text>
+
+  <!-- Terminal content -->
+  <text x="60" y="130" font-family="monospace" font-size="12" fill="#3fb950">$ ./install.sh</text>
+  <text x="60" y="155" font-family="monospace" font-size="11" fill="#8b949e">  ══ portless Setup Wizard ══</text>
+
+  <text x="60" y="185" font-family="monospace" font-size="11" fill="#58a6ff">  Phase 1 — System check</text>
+  <text x="60" y="200" font-family="monospace" font-size="11" fill="#3fb950">  ✔ Docker 27.3 found</text>
+  <text x="60" y="215" font-family="monospace" font-size="11" fill="#3fb950">  ✔ jq, curl, git found</text>
+
+  <text x="60" y="240" font-family="monospace" font-size="11" fill="#58a6ff">  Phase 2 — Basic config</text>
+  <text x="60" y="255" font-family="monospace" font-size="11" fill="#e6edf3">  Domain: <tspan fill="#d29922">example.com</tspan></text>
+  <text x="60" y="270" font-family="monospace" font-size="11" fill="#e6edf3">  Server IP: <tspan fill="#d29922">192.168.1.100</tspan></text>
+
+  <text x="60" y="295" font-family="monospace" font-size="11" fill="#58a6ff">  Phase 3 — TLS &amp; auth</text>
+  <text x="60" y="310" font-family="monospace" font-size="11" fill="#3fb950">  ✔ Cloudflare token validated</text>
+  <text x="60" y="325" font-family="monospace" font-size="11" fill="#e6edf3">  Auth: <tspan fill="#d29922">TinyAuth SSO</tspan></text>
+
+  <text x="60" y="350" font-family="monospace" font-size="11" fill="#58a6ff">  Phase 4 — App selection</text>
+  <text x="60" y="365" font-family="monospace" font-size="11" fill="#3fb950">  ✔ Plex, Jellyfin, Radarr</text>
+  <text x="60" y="380" font-family="monospace" font-size="11" fill="#3fb950">  ✔ Sonarr, Prowlarr, qBittorrent</text>
+  <text x="60" y="395" font-family="monospace" font-size="11" fill="#3fb950">  ✔ Portainer, Dozzle, Uptime Kuma</text>
+  <text x="60" y="410" font-family="monospace" font-size="11" fill="#3fb950">  ✔ Arrmate, Vaultwarden, n8n</text>
+
+  <text x="60" y="435" font-family="monospace" font-size="11" fill="#58a6ff">  Phase 5 — Remote access</text>
+  <text x="60" y="450" font-family="monospace" font-size="11" fill="#e6edf3">  Method: <tspan fill="#d29922">Cloudflare Tunnel</tspan></text>
+  <text x="60" y="465" font-family="monospace" font-size="11" fill="#3fb950">  ✔ Tunnel created</text>
+
+  <text x="60" y="490" font-family="monospace" font-size="11" fill="#58a6ff">  Phase 6 — Deploy</text>
+  <text x="60" y="505" font-family="monospace" font-size="11" fill="#3fb950">  ✔ Staging cert test passed</text>
+  <text x="60" y="520" font-family="monospace" font-size="11" fill="#3fb950">  ✔ Stack started (14 containers)</text>
+  <text x="60" y="545" font-family="monospace" font-size="12" fill="#3fb950">  All services online ✔</text>
+
+  <!-- Right panel — service cards -->
+  <!-- Header -->
+  <text x="570" y="90" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="28" font-weight="800" fill="url(#accent)">portless</text>
+  <text x="570" y="115" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" fill="#8b949e">Self-hosted media stack — zero port forwarding</text>
+
+  <!-- Service cards row 1 -->
+  <rect x="570" y="135" width="175" height="70" rx="6" fill="url(#card)" stroke="#30363d" stroke-width="1"/>
+  <text x="590" y="162" font-family="monospace" font-size="11" fill="#8b949e">MEDIA</text>
+  <text x="590" y="180" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#e6edf3">Jellyfin</text>
+  <text x="590" y="196" font-family="monospace" font-size="10" fill="#3fb950">● online</text>
+  <text x="680" y="196" font-family="monospace" font-size="10" fill="#58a6ff">jellyfin.example.com</text>
+
+  <rect x="755" y="135" width="175" height="70" rx="6" fill="url(#card)" stroke="#30363d" stroke-width="1"/>
+  <text x="775" y="162" font-family="monospace" font-size="11" fill="#8b949e">ARR</text>
+  <text x="775" y="180" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#e6edf3">Radarr</text>
+  <text x="775" y="196" font-family="monospace" font-size="10" fill="#3fb950">● online</text>
+  <text x="840" y="196" font-family="monospace" font-size="10" fill="#58a6ff">movies.example.com</text>
+
+  <rect x="940" y="135" width="175" height="70" rx="6" fill="url(#card)" stroke="#30363d" stroke-width="1"/>
+  <text x="960" y="162" font-family="monospace" font-size="11" fill="#8b949e">SECURITY</text>
+  <text x="960" y="180" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#e6edf3">Vaultwarden</text>
+  <text x="960" y="196" font-family="monospace" font-size="10" fill="#3fb950">● online</text>
+
+  <!-- Service cards row 2 -->
+  <rect x="570" y="215" width="175" height="70" rx="6" fill="url(#card)" stroke="#30363d" stroke-width="1"/>
+  <text x="590" y="242" font-family="monospace" font-size="11" fill="#8b949e">MANAGEMENT</text>
+  <text x="590" y="260" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#e6edf3">Arrmate</text>
+  <text x="590" y="276" font-family="monospace" font-size="10" fill="#3fb950">● online</text>
+  <text x="650" y="276" font-family="monospace" font-size="9" fill="#bc8cff">AI-powered</text>
+
+  <rect x="755" y="215" width="175" height="70" rx="6" fill="url(#card)" stroke="#30363d" stroke-width="1"/>
+  <text x="775" y="242" font-family="monospace" font-size="11" fill="#8b949e">MONITORING</text>
+  <text x="775" y="260" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#e6edf3">Uptime Kuma</text>
+  <text x="775" y="276" font-family="monospace" font-size="10" fill="#3fb950">● online</text>
+
+  <rect x="940" y="215" width="175" height="70" rx="6" fill="url(#card)" stroke="#30363d" stroke-width="1"/>
+  <text x="960" y="242" font-family="monospace" font-size="11" fill="#8b949e">AUTOMATION</text>
+  <text x="960" y="260" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="13" font-weight="600" fill="#e6edf3">n8n</text>
+  <text x="960" y="276" font-family="monospace" font-size="10" fill="#3fb950">● online</text>
+
+  <!-- Architecture diagram -->
+  <rect x="570" y="300" width="545" height="130" rx="6" fill="#0d1117" stroke="#30363d" stroke-width="1"/>
+  <text x="590" y="322" font-family="monospace" font-size="10" fill="#8b949e">ARCHITECTURE</text>
+
+  <!-- Browser box -->
+  <rect x="590" y="330" width="80" height="30" rx="4" fill="#1c2128" stroke="#30363d" stroke-width="1"/>
+  <text x="630" y="350" font-family="monospace" font-size="9" fill="#e6edf3" text-anchor="middle">Browser</text>
+
+  <!-- Arrow 1 -->
+  <line x1="670" y1="345" x2="710" y2="345" stroke="#58a6ff" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="688" y="340" font-family="monospace" font-size="8" fill="#58a6ff" text-anchor="middle">HTTPS</text>
+
+  <!-- Cloudflare box -->
+  <rect x="710" y="330" width="90" height="30" rx="4" fill="#1c2128" stroke="#d29922" stroke-width="1"/>
+  <text x="755" y="350" font-family="monospace" font-size="9" fill="#d29922" text-anchor="middle">Cloudflare</text>
+
+  <!-- Arrow 2 -->
+  <line x1="800" y1="345" x2="840" y2="345" stroke="#58a6ff" stroke-width="1.5"/>
+  <polygon points="840,341 848,345 840,349" fill="#58a6ff"/>
+  <text x="820" y="340" font-family="monospace" font-size="8" fill="#58a6ff" text-anchor="middle">tunnel</text>
+
+  <!-- Traefik box -->
+  <rect x="848" y="330" width="80" height="30" rx="4" fill="#1c2128" stroke="#3fb950" stroke-width="1"/>
+  <text x="888" y="350" font-family="monospace" font-size="9" fill="#3fb950" text-anchor="middle">Traefik</text>
+
+  <!-- Arrow 3 -->
+  <line x1="928" y1="345" x2="968" y2="345" stroke="#58a6ff" stroke-width="1.5"/>
+  <polygon points="968,341 976,345 968,349" fill="#58a6ff"/>
+
+  <!-- Apps box -->
+  <rect x="976" y="330" width="110" height="30" rx="4" fill="#1c2128" stroke="#bc8cff" stroke-width="1"/>
+  <text x="1031" y="350" font-family="monospace" font-size="9" fill="#bc8cff" text-anchor="middle">Your Apps</text>
+
+  <!-- TinyAuth label -->
+  <rect x="710" y="372" width="238" height="22" rx="4" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+  <text x="829" y="387" font-family="monospace" font-size="9" fill="#8b949e" text-anchor="middle">🔒 TinyAuth SSO — one login, all apps</text>
+
+  <!-- No ports label -->
+  <text x="590" y="412" font-family="monospace" font-size="10" fill="#8b949e">No open ports on your router.</text>
+  <text x="590" y="426" font-family="monospace" font-size="10" fill="#8b949e">Home IP never exposed.</text>
+
+  <!-- Stats row -->
+  <rect x="570" y="445" width="175" height="65" rx="6" fill="url(#card)" stroke="#30363d" stroke-width="1"/>
+  <text x="590" y="470" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="22" font-weight="800" fill="#58a6ff">40+</text>
+  <text x="590" y="488" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" fill="#8b949e">apps available</text>
+  <text x="590" y="503" font-family="monospace" font-size="9" fill="#8b949e">one command to install</text>
+
+  <rect x="755" y="445" width="175" height="65" rx="6" fill="url(#card)" stroke="#30363d" stroke-width="1"/>
+  <text x="775" y="470" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="22" font-weight="800" fill="#3fb950">5</text>
+  <text x="775" y="488" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" fill="#8b949e">tunnel methods</text>
+  <text x="775" y="503" font-family="monospace" font-size="9" fill="#8b949e">Cloudflare · Pangolin · Tailscale…</text>
+
+  <rect x="940" y="445" width="175" height="65" rx="6" fill="url(#card)" stroke="#30363d" stroke-width="1"/>
+  <text x="960" y="470" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="22" font-weight="800" fill="#bc8cff">0</text>
+  <text x="960" y="488" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" fill="#8b949e">ports forwarded</text>
+  <text x="960" y="503" font-family="monospace" font-size="9" fill="#8b949e">works with CGNAT</text>
+
+  <!-- Footer -->
+  <text x="570" y="560" font-family="monospace" font-size="10" fill="#3fb950">$ ./manage.sh add arrmate</text>
+  <text x="570" y="578" font-family="monospace" font-size="10" fill="#8b949e">  ✔ arrmate.example.com — online</text>
+
+  <text x="1160" y="615" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="11" fill="#30363d" text-anchor="end">github.com/techbutton/portless</text>
+</svg>
