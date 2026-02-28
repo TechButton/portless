@@ -187,13 +187,16 @@ phase2_basic_config() {
   # Set up data directory — handles NFS/SMB mounts and sudo-create for
   # paths like /mnt/data that are under root-owned mount points.
   if setup_data_dir "$CFG_DATADIR" "$CFG_USER" "$CFG_DOCKERDIR"; then
-    log_sub "Creating media/downloads subdirectories..."
-    ensure_dir "${CFG_DATADIR}/media/movies"
-    ensure_dir "${CFG_DATADIR}/media/tv"
-    ensure_dir "${CFG_DATADIR}/media/music"
-    ensure_dir "${CFG_DATADIR}/media/books"
-    ensure_dir "${CFG_DATADIR}/media/audiobooks"
-    ensure_dir "${CFG_DATADIR}/media/comics"
+    # For NFS per-share mounts these dirs already exist and ensure_dir is a no-op.
+    # For local/sudo/SMB setups they are created here.
+    log_sub "Creating subdirectories under $CFG_DATADIR..."
+    ensure_dir "${CFG_DATADIR}/movies"
+    ensure_dir "${CFG_DATADIR}/tv"
+    ensure_dir "${CFG_DATADIR}/music"
+    ensure_dir "${CFG_DATADIR}/books"
+    ensure_dir "${CFG_DATADIR}/audiobooks"
+    ensure_dir "${CFG_DATADIR}/comics"
+    ensure_dir "${CFG_DATADIR}/downloads"
     ensure_dir "${CFG_DATADIR}/usenet/incomplete"
     ensure_dir "${CFG_DATADIR}/usenet/complete"
     ensure_dir "${CFG_DATADIR}/torrents/incomplete"
@@ -589,12 +592,12 @@ _gen_env_file() {
     "CF_EMAIL=${CFG_CF_EMAIL:-CHANGE_ME}" \
     "DOWNLOADSDIR=${CFG_DOWNLOADSDIR}" \
     "DATADIR=${CFG_DATADIR}" \
-    "MOVIES_DIR=${CFG_DATADIR}/media/movies" \
-    "TV_DIR=${CFG_DATADIR}/media/tv" \
-    "MUSIC_DIR=${CFG_DATADIR}/media/music" \
-    "BOOKS_DIR=${CFG_DATADIR}/media/books" \
-    "AUDIOBOOKS_DIR=${CFG_DATADIR}/media/audiobooks" \
-    "COMICS_DIR=${CFG_DATADIR}/media/comics" \
+    "MOVIES_DIR=${CFG_DATADIR}/movies" \
+    "TV_DIR=${CFG_DATADIR}/tv" \
+    "MUSIC_DIR=${CFG_DATADIR}/music" \
+    "BOOKS_DIR=${CFG_DATADIR}/books" \
+    "AUDIOBOOKS_DIR=${CFG_DATADIR}/audiobooks" \
+    "COMICS_DIR=${CFG_DATADIR}/comics" \
     "NEWT_ID=${NEWT_ID:-}" \
     "NEWT_SECRET=${NEWT_SECRET:-}" \
     "PANGOLIN_HOST=${PANGOLIN_VPS_HOST:-}" \

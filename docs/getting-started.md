@@ -57,17 +57,16 @@ NFS and SMB fstab entries are written with `_netdev,nofail`:
 - `_netdev` — delays the mount until the network is up (prevents boot failure if the NAS isn't immediately reachable)
 - `nofail` — allows the server to boot normally even if the mount fails (NAS down, wrong credentials, etc.)
 
-Once the directory is accessible, the installer creates this subdirectory layout:
+Once the directory is accessible, the installer creates this subdirectory layout directly under your data directory:
 
 ```
-/mnt/data/
-├── media/
-│   ├── movies/
-│   ├── tv/
-│   ├── music/
-│   ├── books/
-│   ├── audiobooks/
-│   └── comics/
+/mnt/data/          ← your chosen data directory
+├── movies/
+├── tv/
+├── music/
+├── books/
+├── audiobooks/
+├── comics/
 ├── downloads/
 ├── usenet/
 │   ├── incomplete/
@@ -76,6 +75,8 @@ Once the directory is accessible, the installer creates this subdirectory layout
     ├── incomplete/
     └── complete/
 ```
+
+**For NFS per-share mounts**, each export is mounted directly to the matching subfolder — `nfsserver:/vol/movies` → `/mnt/data/movies`, `nfsserver:/vol/tv` → `/mnt/data/tv`, and so on. Any subfolder that was already mounted by NFS is skipped during the `ensure_dir` pass.
 
 Each subdirectory is exposed to the relevant containers as a named variable in your `.env` (`MOVIES_DIR`, `TV_DIR`, `MUSIC_DIR`, `BOOKS_DIR`, `AUDIOBOOKS_DIR`, `COMICS_DIR`). See [Data directories in .env](#data-directories-in-env) below.
 
@@ -166,12 +167,12 @@ The generated `.env` contains named variables for each media type. All paths def
 ```bash
 DATADIR=/mnt/data            # Root data directory
 
-MOVIES_DIR=/mnt/data/media/movies
-TV_DIR=/mnt/data/media/tv
-MUSIC_DIR=/mnt/data/media/music
-BOOKS_DIR=/mnt/data/media/books
-AUDIOBOOKS_DIR=/mnt/data/media/audiobooks
-COMICS_DIR=/mnt/data/media/comics
+MOVIES_DIR=/mnt/data/movies
+TV_DIR=/mnt/data/tv
+MUSIC_DIR=/mnt/data/music
+BOOKS_DIR=/mnt/data/books
+AUDIOBOOKS_DIR=/mnt/data/audiobooks
+COMICS_DIR=/mnt/data/comics
 
 DOWNLOADSDIR=/mnt/data/downloads
 ```

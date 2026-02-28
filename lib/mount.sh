@@ -29,8 +29,47 @@ _mount_sudo_create() {
 
 # ─── NFS ─────────────────────────────────────────────────────────────────────
 
+# _mount_nfs_one <server> <export> <local_dir> <nfs_ver> <user>
+# Mounts a single NFS export with a retry loop. Returns 0 on success.
+_mount_nfs_one() {
+  local nfs_server="$1" export_path="$2" local_dir="$3" nfs_ver="$4" user="$5"
+
+  # Create subfolder if needed
+  if [[ ! -d "$local_dir" ]]; then
+    sudo mkdir -p "$local_dir" || { log_error "Could not create $local_dir"; return 1; }
+  fi
+
+  while true; do
+    log_sub "Mounting ${nfs_server}:${export_path} → ${local_dir}..."
+    if sudo mount -t nfs -o "nfsvers=${nfs_ver}" "${nfs_server}:${export_path}" "$local_dir"; then
+      log_ok "Mounted → ${local_dir}"
+      sudo chown "${user}:${user}" "$local_dir" 2>/dev/null || true
+
+      # Add fstab entry with _netdev (wait for network) and nofail (don't block boot)
+      local fstab_entry="${nfs_server}:${export_path} ${local_dir} nfs nfsvers=${nfs_ver},defaults,_netdev,nofail 0 0"
+      if grep -qsF "$local_dir" /etc/fstab; then
+        log_warn "fstab entry for ${local_dir} already exists — skipped"
+      else
+        echo "$fstab_entry" | sudo tee -a /etc/fstab > /dev/null
+        log_sub "fstab: $fstab_entry"
+      fi
+      return 0
+    fi
+
+    log_error "Mount failed for ${nfs_server}:${export_path}"
+    prompt_yn "Retry with a different export path?" "Y"
+    if [[ "${REPLY^^}" == "Y" ]]; then
+      prompt_input "Correct export path" "$export_path"
+      export_path="$REPLY"
+      [[ -n "$export_path" ]] || return 1
+    else
+      return 1
+    fi
+  done
+}
+
 _mount_nfs() {
-  local mountpoint="$1"
+  local mountpoint="${1%/}"   # strip trailing slash, e.g. /media
   local user="$2"
 
   # Ensure nfs-common is present (also provides showmount)
@@ -42,77 +81,93 @@ _mount_nfs() {
   local nfs_server="$REPLY"
   [[ -n "$nfs_server" ]] || die "NFS server cannot be empty"
 
-  # Show available exports so the user knows the exact path to enter.
-  # This is the most common source of confusion — NAS paths look nothing
-  # like local paths (Synology: /volume1/..., TrueNAS: /mnt/pool/...).
-  echo ""
+  # ── Discover exports ────────────────────────────────────────────────────────
   log_sub "Querying exports from ${nfs_server}..."
-  if showmount -e "$nfs_server" 2>/dev/null; then
-    echo ""
+  # showmount output: first line is "Export list for <server>:", skip it
+  local exports_raw
+  exports_raw=$(showmount -e "$nfs_server" 2>/dev/null | awk 'NR>1 {print $1}' | sort)
+
+  log_blank
+  if [[ -n "$exports_raw" ]]; then
+    log_info "Exports available on ${nfs_server}:"
+    while IFS= read -r ep; do
+      echo -e "  ${DIM}${ep}${RESET}"
+    done <<< "$exports_raw"
   else
-    log_warn "Could not retrieve export list (showmount failed — server may block the query)."
-    log_warn "Common NAS export path formats:"
-    log_warn "  Synology:  /volume1/data   or  /volume1/homes/user/media"
-    log_warn "  TrueNAS:   /mnt/pool/media"
-    log_warn "  Unraid:    /mnt/user/media"
-    echo ""
+    log_warn "showmount returned no results — server may block the query, or no exports are configured."
+    log_warn "Enter export paths manually. Common NAS formats:"
+    log_warn "  Synology  /volume1/data   /volume1/homes/user/media"
+    log_warn "  TrueNAS   /mnt/pool/name"
+    log_warn "  Unraid    /mnt/user/name"
+    log_blank
+
+    # Collect paths manually — same loop as the auto path below
+    local manual_paths=()
+    while true; do
+      prompt_input "NFS export path to add (leave blank when done)" ""
+      [[ -z "$REPLY" ]] && break
+      manual_paths+=("$REPLY")
+      log_sub "Added: $REPLY"
+    done
+    [[ ${#manual_paths[@]} -gt 0 ]] || die "No export paths entered — cannot continue NFS setup."
+    exports_raw=$(printf '%s\n' "${manual_paths[@]}")
+
+    log_blank
+    log_info "Exports to process:"
+    while IFS= read -r ep; do echo -e "  ${DIM}${ep}${RESET}"; done <<< "$exports_raw"
   fi
 
-  prompt_input "NFS export path on the server (copy exactly from the list above)" ""
-  local nfs_export="$REPLY"
-  [[ -n "$nfs_export" ]] || die "NFS export path cannot be empty"
-
-  prompt_input "NFS version" "4"
+  # ── NFS version — ask once for all mounts ───────────────────────────────────
+  log_blank
+  prompt_input "NFS version to use for all mounts" "4"
   local nfs_ver="$REPLY"
 
-  # Create mount point if needed
+  # ── Ensure base mountpoint exists ───────────────────────────────────────────
   if [[ ! -d "$mountpoint" ]]; then
-    log_sub "Creating mount point $mountpoint..."
-    sudo mkdir -p "$mountpoint" || die "Failed to create mount point $mountpoint"
+    sudo mkdir -p "$mountpoint" || die "Failed to create base directory $mountpoint"
   fi
 
-  # Test mount — retry loop so the user can correct the path without
-  # re-running the whole installer.
-  local mounted=false
-  while true; do
-    log_sub "Testing NFS mount (${nfs_server}:${nfs_export} → $mountpoint)..."
-    if sudo mount -t nfs -o "nfsvers=${nfs_ver}" "${nfs_server}:${nfs_export}" "$mountpoint"; then
-      mounted=true
-      break
+  # ── Walk each export top-down ───────────────────────────────────────────────
+  local -a share_types=("movies" "tv" "music" "books" "audiobooks" "comics" "downloads" "custom name")
+  local mounted_count=0
+
+  while IFS= read -r export_path; do
+    [[ -z "$export_path" ]] && continue
+    log_blank
+    echo -e "  ${BOLD}Export:${RESET} ${CYAN}${nfs_server}:${export_path}${RESET}"
+
+    prompt_yn "Mount this share?" "Y"
+    [[ "${REPLY^^}" == "Y" ]] || { log_sub "Skipped"; continue; }
+
+    # Ask what this share is for
+    prompt_select "What is this share for?" "${share_types[@]}"
+    local share_type="$REPLY"
+
+    local folder_name
+    if [[ "$share_type" == "custom name" ]]; then
+      prompt_input "Folder name (will be created under ${mountpoint}/)" ""
+      folder_name="$REPLY"
+      [[ -n "$folder_name" ]] || { log_warn "No name given — skipping"; continue; }
+    else
+      folder_name="$share_type"
     fi
 
-    log_error "Mount failed. The export path must match exactly what the server publishes."
-    log_warn "Re-run showmount to double-check:  showmount -e ${nfs_server}"
+    local local_dir="${mountpoint}/${folder_name}"
 
-    prompt_yn "Try a different export path?" "Y"
-    if [[ "${REPLY^^}" != "Y" ]]; then
-      die "NFS mount failed. Fix the export path and re-run the installer."
+    if _mount_nfs_one "$nfs_server" "$export_path" "$local_dir" "$nfs_ver" "$user"; then
+      (( mounted_count++ ))
+    else
+      log_warn "Skipped ${export_path} — could not mount"
     fi
 
-    prompt_input "NFS export path on the server" "$nfs_export"
-    nfs_export="$REPLY"
-    [[ -n "$nfs_export" ]] || die "NFS export path cannot be empty"
-  done
+  done <<< "$exports_raw"
 
-  log_ok "NFS mount succeeded"
-
-  # Grant ownership so the user can write subdirectories
-  sudo chown "${user}:${user}" "$mountpoint" 2>/dev/null || true
-
-  # fstab entry — _netdev waits for network before mounting;
-  # nofail allows boot to continue if the server is unreachable
-  local fstab_entry="${nfs_server}:${nfs_export} ${mountpoint} nfs nfsvers=${nfs_ver},defaults,_netdev,nofail 0 0"
-
-  if grep -qsF "$mountpoint" /etc/fstab; then
-    log_warn "An entry for $mountpoint already exists in /etc/fstab — skipping fstab update."
-    log_warn "Verify manually: grep '${mountpoint}' /etc/fstab"
-  else
-    log_sub "Adding fstab entry..."
-    echo "$fstab_entry" | sudo tee -a /etc/fstab > /dev/null
-    log_ok "fstab updated"
+  log_blank
+  if (( mounted_count == 0 )); then
+    log_warn "No NFS shares were mounted."
+    return 1
   fi
-
-  log_sub "Entry: $fstab_entry"
+  log_ok "${mounted_count} NFS share(s) mounted under ${mountpoint}"
 }
 
 # ─── SMB/CIFS ────────────────────────────────────────────────────────────────

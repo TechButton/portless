@@ -81,12 +81,12 @@ The `.env` exposes named variables for each media type. Use these in your compos
 
 | Variable | Default path | Use for |
 |---|---|---|
-| `$MOVIES_DIR` | `$DATADIR/media/movies` | Movie libraries (Radarr, Plex, Jellyfin) |
-| `$TV_DIR` | `$DATADIR/media/tv` | TV libraries (Sonarr, Plex, Jellyfin) |
-| `$MUSIC_DIR` | `$DATADIR/media/music` | Music libraries (Lidarr, Navidrome) |
-| `$BOOKS_DIR` | `$DATADIR/media/books` | E-books (Calibre-Web, Kavita) |
-| `$AUDIOBOOKS_DIR` | `$DATADIR/media/audiobooks` | Audiobooks (Audiobookshelf) |
-| `$COMICS_DIR` | `$DATADIR/media/comics` | Comics & manga (Komga, Mylar3, Kavita) |
+| `$MOVIES_DIR` | `$DATADIR/movies` | Movie libraries (Radarr, Plex, Jellyfin) |
+| `$TV_DIR` | `$DATADIR/tv` | TV libraries (Sonarr, Plex, Jellyfin) |
+| `$MUSIC_DIR` | `$DATADIR/music` | Music libraries (Lidarr, Navidrome) |
+| `$BOOKS_DIR` | `$DATADIR/books` | E-books (Calibre-Web, Kavita) |
+| `$AUDIOBOOKS_DIR` | `$DATADIR/audiobooks` | Audiobooks (Audiobookshelf) |
+| `$COMICS_DIR` | `$DATADIR/comics` | Comics & manga (Komga, Mylar3, Kavita) |
 | `$DOWNLOADSDIR` | `$DATADIR/downloads` | Download clients (SABnzbd, qBittorrent) |
 | `$DATADIR` | `/mnt/data` | Root data directory (VS Code, general access) |
 

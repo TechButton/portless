@@ -35,33 +35,36 @@ Then re-run `./install.sh` — it will detect the directory is now accessible an
 
 ### NFS mount fails during install
 
-The installer now runs `showmount -e <server>` automatically and displays available exports before asking for the path. The export path must match **exactly** what the server publishes — it is the path on the NAS, not a local path.
+The installer runs `showmount -e <server>` automatically, lists all available exports, and walks through them one at a time asking what each share is for (movies, tv, music, etc.). A folder is created under your data directory and the export is mounted there.
 
-Common NAS formats:
+The export path must match **exactly** what the server publishes. Common NAS formats:
 
 | NAS | Typical export path |
 |---|---|
-| Synology | `/volume1/data` or `/volume1/homes/kyle/media` |
-| TrueNAS | `/mnt/pool/media` |
-| Unraid | `/mnt/user/media` |
+| Synology | `/volume1/movies`, `/volume1/tv`, etc. |
+| TrueNAS | `/mnt/pool/movies`, `/mnt/pool/tv`, etc. |
+| Unraid | `/mnt/user/movies`, `/mnt/user/tv`, etc. |
 
-If the mount fails, the installer will offer to retry with a corrected path. You can also check manually:
+If a mount fails, the installer offers to retry with a corrected path. You can also check manually:
 
 ```bash
 # See what the server actually exports
 showmount -e 192.168.13.6
 
-# Test the mount manually with the exact path from showmount
-sudo mount -t nfs -o nfsvers=4 192.168.13.6:/volume1/mounts /mnt/data
+# Test a specific mount manually
+sudo mkdir -p /mnt/data/movies
+sudo mount -t nfs -o nfsvers=4 192.168.13.6:/volume1/movies /mnt/data/movies
 
 # If version 4 fails, try version 3
-sudo mount -t nfs -o nfsvers=3 192.168.13.6:/volume1/mounts /mnt/data
+sudo mount -t nfs -o nfsvers=3 192.168.13.6:/volume1/movies /mnt/data/movies
 ```
 
 Other things to check:
 - The NFS server is reachable: `ping <server-ip>`
 - The server's export allows your host's IP or subnet (check NAS control panel → File Services → NFS)
 - The export has read/write permissions for your user/IP
+
+If `showmount` is blocked by the server, the installer falls back to manual entry — you can type export paths one at a time.
 
 ### SMB mount fails during install
 
