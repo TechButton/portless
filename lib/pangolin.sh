@@ -7,8 +7,7 @@
 [[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 HOMELAB_PANGOLIN_LOADED=1
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ADD_RESOURCE_SCRIPT="${REPO_ROOT}/templates/pangolin/add_resource.cjs"
 VPS_INIT_SCRIPT="${REPO_ROOT}/templates/pangolin/vps-init.sh"
 PANGOLIN_COMPOSE_TMPL="${REPO_ROOT}/templates/pangolin/pangolin-compose.yml.tmpl"

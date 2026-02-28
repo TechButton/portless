@@ -4,8 +4,7 @@
 [[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 HOMELAB_TRAEFIK_LOADED=1
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # Reference templates (used by manage.sh regen for manual rule creation)
 TRAEFIK_TMPL_NOAUTH="${REPO_ROOT}/templates/traefik/app-noauth.yml.tmpl"
