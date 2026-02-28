@@ -75,6 +75,39 @@ Create `compose/<hostname>/<appname>.yml` (or `compose/<appname>.yml` for any ho
 
 **Important:** The compose snippet should NOT include the `services:` header — it's just the service block. The portless `manage.sh add` command appends it to your main compose file.
 
+### Using media directories
+
+The `.env` exposes named variables for each media type. Use these in your compose snippet instead of hardcoded paths:
+
+| Variable | Default path | Use for |
+|---|---|---|
+| `$MOVIES_DIR` | `$DATADIR/media/movies` | Movie libraries (Radarr, Plex, Jellyfin) |
+| `$TV_DIR` | `$DATADIR/media/tv` | TV libraries (Sonarr, Plex, Jellyfin) |
+| `$MUSIC_DIR` | `$DATADIR/media/music` | Music libraries (Lidarr, Navidrome) |
+| `$BOOKS_DIR` | `$DATADIR/media/books` | E-books (Calibre-Web, Kavita) |
+| `$AUDIOBOOKS_DIR` | `$DATADIR/media/audiobooks` | Audiobooks (Audiobookshelf) |
+| `$COMICS_DIR` | `$DATADIR/media/comics` | Comics & manga (Komga, Mylar3, Kavita) |
+| `$DOWNLOADSDIR` | `$DATADIR/downloads` | Download clients (SABnzbd, qBittorrent) |
+| `$DATADIR` | `/mnt/data` | Root data directory (VS Code, general access) |
+
+Example — a music streaming app:
+```yaml
+    volumes:
+      - ${DOCKERDIR}/appdata/myapp:/config
+      - $MUSIC_DIR:/music:ro
+      - /etc/localtime:/etc/localtime:ro
+```
+
+Example — a media server that needs everything:
+```yaml
+    volumes:
+      - ${DOCKERDIR}/appdata/myapp:/config
+      - $MOVIES_DIR:/data/movies
+      - $TV_DIR:/data/tv
+      - $MUSIC_DIR:/data/music
+      - $DOWNLOADSDIR:/data/downloads
+```
+
 ## Step 3: Add to .env Template (Optional)
 
 If you want the port to appear in the .env template, add it to `templates/env.template`:
@@ -83,6 +116,25 @@ If you want the port to appear in the .env template, add it to `templates/env.te
 # Management
 MYAPP_PORT=8123
 ```
+
+If your app generates an API key that other services need, add a placeholder in the **App API Keys** section of `templates/env.template`:
+
+```bash
+# ── App API Keys ──────────────────────────────────────────────────────────────
+MYAPP_API_KEY=CHANGE_ME
+```
+
+If your app supports setting its own API key via environment variable (the LinuxServer `APP__Auth__ApiKey` pattern), wire it in the compose snippet:
+
+```yaml
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      MYAPP__Auth__ApiKey: $MYAPP_API_KEY
+```
+
+This lets you choose the API key value before first launch, making it predictable for integrations.
 
 ## Step 4: Test It
 

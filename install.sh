@@ -17,6 +17,7 @@ source "${SCRIPT_DIR}/lib/state.sh"
 source "${SCRIPT_DIR}/lib/traefik.sh"
 source "${SCRIPT_DIR}/lib/pangolin.sh"
 source "${SCRIPT_DIR}/lib/cloudflare.sh"
+source "${SCRIPT_DIR}/lib/mount.sh"
 source "${SCRIPT_DIR}/lib/tailscale.sh"
 source "${SCRIPT_DIR}/lib/headscale.sh"
 source "${SCRIPT_DIR}/lib/netbird.sh"
@@ -174,20 +175,30 @@ phase2_basic_config() {
   state_set_kv "hostname" "$CFG_HOSTNAME"
   state_set_kv "dockerdir" "$CFG_DOCKERDIR"
 
-  # Create directory structure
+  # Create Docker directory structure first — secrets dir must exist before
+  # setup_data_dir runs so SMB credentials can be written there.
   log_sub "Creating directory structure in $CFG_DOCKERDIR..."
   ensure_dir "$CFG_DOCKERDIR"
   ensure_dir "$CFG_DOCKERDIR/secrets"
   ensure_dir "$CFG_DOCKERDIR/appdata/traefik3/acme"
   ensure_dir "$CFG_DOCKERDIR/appdata/traefik3/rules/${CFG_HOSTNAME}"
   ensure_dir "$CFG_DOCKERDIR/compose/${CFG_HOSTNAME}"
-  ensure_dir "${CFG_DATADIR}/media/movies"
-  ensure_dir "${CFG_DATADIR}/media/tv"
-  ensure_dir "${CFG_DATADIR}/media/music"
-  ensure_dir "${CFG_DATADIR}/usenet/incomplete"
-  ensure_dir "${CFG_DATADIR}/usenet/complete"
-  ensure_dir "${CFG_DATADIR}/torrents/incomplete"
-  ensure_dir "${CFG_DATADIR}/torrents/complete"
+
+  # Set up data directory — handles NFS/SMB mounts and sudo-create for
+  # paths like /mnt/data that are under root-owned mount points.
+  if setup_data_dir "$CFG_DATADIR" "$CFG_USER" "$CFG_DOCKERDIR"; then
+    log_sub "Creating media/downloads subdirectories..."
+    ensure_dir "${CFG_DATADIR}/media/movies"
+    ensure_dir "${CFG_DATADIR}/media/tv"
+    ensure_dir "${CFG_DATADIR}/media/music"
+    ensure_dir "${CFG_DATADIR}/media/books"
+    ensure_dir "${CFG_DATADIR}/media/audiobooks"
+    ensure_dir "${CFG_DATADIR}/media/comics"
+    ensure_dir "${CFG_DATADIR}/usenet/incomplete"
+    ensure_dir "${CFG_DATADIR}/usenet/complete"
+    ensure_dir "${CFG_DATADIR}/torrents/incomplete"
+    ensure_dir "${CFG_DATADIR}/torrents/complete"
+  fi
 
   # Create acme.json for Traefik TLS
   local acme_file="${CFG_DOCKERDIR}/appdata/traefik3/acme/acme.json"
@@ -561,13 +572,9 @@ _gen_env_file() {
   local env_file="${CFG_DOCKERDIR}/.env"
   backup_file "$env_file"
 
-  # Prompt for media/downloads directories
+  # Prompt for downloads directory (may differ from media dir on some setups)
   prompt_input "Downloads directory" "${CFG_DATADIR}/downloads"
   CFG_DOWNLOADSDIR="$REPLY"
-  prompt_input "Primary media directory (MEDIADIR1)" "${CFG_DATADIR}/media"
-  CFG_MEDIADIR1="$REPLY"
-  prompt_input "Secondary media directory (MEDIADIR2 — can be same as MEDIADIR1)" "${CFG_DATADIR}/media"
-  CFG_MEDIADIR2="$REPLY"
 
   render_template "${SCRIPT_DIR}/templates/env.template" "$env_file" \
     "GENERATED_DATE=$(date '+%Y-%m-%d %H:%M:%S')" \
@@ -581,10 +588,13 @@ _gen_env_file() {
     "SERVER_LAN_IP=${CFG_SERVER_IP}" \
     "CF_EMAIL=${CFG_CF_EMAIL:-CHANGE_ME}" \
     "DOWNLOADSDIR=${CFG_DOWNLOADSDIR}" \
-    "DATADIR1=${CFG_DATADIR}" \
-    "DATADIR2=${CFG_DATADIR}" \
-    "MEDIADIR1=${CFG_MEDIADIR1}" \
-    "MEDIADIR2=${CFG_MEDIADIR2}" \
+    "DATADIR=${CFG_DATADIR}" \
+    "MOVIES_DIR=${CFG_DATADIR}/media/movies" \
+    "TV_DIR=${CFG_DATADIR}/media/tv" \
+    "MUSIC_DIR=${CFG_DATADIR}/media/music" \
+    "BOOKS_DIR=${CFG_DATADIR}/media/books" \
+    "AUDIOBOOKS_DIR=${CFG_DATADIR}/media/audiobooks" \
+    "COMICS_DIR=${CFG_DATADIR}/media/comics" \
     "NEWT_ID=${NEWT_ID:-}" \
     "NEWT_SECRET=${NEWT_SECRET:-}" \
     "PANGOLIN_HOST=${PANGOLIN_VPS_HOST:-}" \

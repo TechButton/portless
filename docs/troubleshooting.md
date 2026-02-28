@@ -2,6 +2,91 @@
 
 ## Installation Issues
 
+### "Permission denied" creating the media directory
+
+The installer tries to create the subdirectory structure under your chosen data directory (e.g. `/mnt/data`). If you see:
+
+```
+mkdir: cannot create directory '/mnt/data': Permission denied
+[ERROR] Failed to create directory: /mnt/data/media/movies
+```
+
+This happens because `/mnt` is root-owned. The installer now detects this and offers options — but if you bypassed the prompt or are re-running, you can fix it manually:
+
+```bash
+# Option 1 — local disk
+sudo mkdir -p /mnt/data
+sudo chown $(whoami):$(whoami) /mnt/data
+
+# Option 2 — NFS (example)
+sudo apt install nfs-common
+sudo mkdir -p /mnt/data
+sudo mount -t nfs -o nfsvers=4 192.168.1.10:/tank/media /mnt/data
+# Add to /etc/fstab for persistence (see NFS section below)
+
+# Option 3 — SMB/CIFS (example)
+sudo apt install cifs-utils
+sudo mkdir -p /mnt/data
+sudo mount -t cifs //192.168.1.10/media /mnt/data \
+  -o credentials=/home/kyle/docker/secrets/.smb_credentials,uid=$(id -u),gid=$(id -g)
+```
+
+Then re-run `./install.sh` — it will detect the directory is now accessible and continue.
+
+### NFS mount fails during install
+
+```
+NFS mount failed. Verify the server address, export path, and that this host is allowed.
+```
+
+Check that:
+1. The NFS server is reachable: `ping <server-ip>`
+2. The export is published: `showmount -e <server-ip>` (install `nfs-common` first)
+3. The server's `/etc/exports` includes your host's IP or subnet
+4. The NFS version matches — try version 3 if version 4 fails
+
+```bash
+# Test manually
+sudo mount -t nfs -o nfsvers=3 192.168.1.10:/tank/media /mnt/data
+```
+
+### SMB mount fails during install
+
+```
+SMB mount failed. Verify the server address, share name, and credentials.
+```
+
+Check that:
+1. The server is reachable: `ping <server-ip>`
+2. The share name is correct — Windows shares are case-sensitive
+3. The user has read/write access to the share
+4. `cifs-utils` is installed: `sudo apt install cifs-utils`
+
+```bash
+# Test manually
+sudo mount -t cifs //192.168.1.10/media /mnt/data \
+  -o username=youruser,password=yourpass,uid=$(id -u),gid=$(id -g)
+```
+
+### NFS/SMB share not mounting on reboot
+
+If the share was mounted manually but isn't persisting, check `/etc/fstab`. The installer adds the entry automatically, but if it was skipped:
+
+```bash
+# NFS entry
+192.168.1.10:/tank/media /mnt/data nfs nfsvers=4,defaults,_netdev,nofail 0 0
+
+# SMB entry
+//192.168.1.10/media /mnt/data cifs credentials=/home/kyle/docker/secrets/.smb_credentials,uid=1000,gid=1000,iocharset=utf8,_netdev,nofail 0 0
+```
+
+The `_netdev` flag tells systemd to wait for the network before mounting. The `nofail` flag allows the system to boot normally if the mount fails (e.g. NAS is offline). **Both are recommended for homelab NAS mounts.**
+
+Test that fstab is correct without rebooting:
+```bash
+sudo mount -a
+```
+
 ### "Docker group changes — please re-login"
 
 After the installer adds you to the `docker` group, you must log out and back in. Then re-run `./install.sh`. The installer detects you're already configured and skips to where it left off.

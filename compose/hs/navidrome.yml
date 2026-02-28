@@ -14,8 +14,7 @@ services:
       - "$NAVIDROME_PORT:4533"
     volumes:
       - $DOCKERDIR/appdata/navidrome:/data
-      # Map your music library (read-only recommended):
-      # - /path/to/music:/music:ro
+      - $MUSIC_DIR:/music:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
       TZ: $TZ

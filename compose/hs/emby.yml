@@ -14,9 +14,9 @@ services:
       - "$EMBY_PORT:8096"
     volumes:
       - $DOCKERDIR/appdata/emby:/config
-      # Map your media library paths:
-      # - /path/to/movies:/movies:ro
-      # - /path/to/tvshows:/tvshows:ro
+      - $MOVIES_DIR:/data/movies:ro
+      - $TV_DIR:/data/tv:ro
+      - $MUSIC_DIR:/data/music:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
       TZ: $TZ

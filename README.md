@@ -105,13 +105,16 @@ Before switching to production certs, the installer runs a **staging certificate
 |----------|------|
 | Core | Traefik, Socket Proxy, TinyAuth |
 | Security | CrowdSec (optional) |
-| Media | Plex, Jellyfin |
+| Media | Plex, Jellyfin, Emby |
 | *Arr | Sonarr, Radarr, Lidarr, Bazarr, Prowlarr |
+| Books / Comics | Kavita, Komga, Calibre-Web, Mylar3 |
+| Music | Navidrome |
+| Audiobooks | Audiobookshelf |
 | Downloads | SABnzbd, qBittorrent+VPN (Gluetun) |
 | Management | Portainer, VS Code, Dozzle, WUD, Uptime Kuma, IT-Tools, Glances |
-| Requests | Overseerr |
-| Media Tools | Kometa, Maintainerr, Notifiarr |
-| Other | Stirling PDF |
+| Requests | Overseerr, Jellyseerr |
+| Media Tools | Kometa, Maintainerr, Notifiarr, Tautulli |
+| Other | Stirling PDF, and 90+ more optional apps |
 
 ---
 
@@ -153,6 +156,7 @@ portless/
 ├── lib/
 │   ├── common.sh                 # Logging, prompts, helpers
 │   ├── docker.sh                 # Docker installer
+│   ├── mount.sh                  # NFS / SMB / local data directory setup
 │   ├── traefik.sh                # Traefik wizard, compose gen, rule generator
 │   ├── state.sh                  # State file (JSON via jq)
 │   ├── cloudflare.sh             # Cloudflare Tunnel + DNS API

@@ -22,11 +22,62 @@ chmod +x install.sh manage.sh
 The installer runs through six phases and asks questions as it goes:
 
 1. **System check** — confirms Docker is installed (offers to install if missing), checks for jq, curl, git
-2. **Basic config** — hostname, Linux user, timezone (auto-detected), Docker directory
+2. **Basic config** — hostname, Linux user, timezone (auto-detected), Docker directory, media/data directory
 3. **Domain & network** — your domain, Cloudflare API token, server LAN IP, Traefik access mode (local vs hybrid), authentication layer (TinyAuth / Basic Auth / None)
 4. **App selection** — pick what to run from a categorized checklist
 5. **Remote access** — choose how to reach services from outside your home network
 6. **Generate & deploy** — writes your `.env`, middleware chain files, and `docker-compose-<hostname>.yml`, runs a staging cert test, then starts everything
+
+### Media directory setup (Phase 2)
+
+After entering your data directory (default `/mnt/data`), the installer checks whether the path exists and is writable. If it isn't — which is common since `/mnt` is root-owned — it offers four options:
+
+```
+How would you like to set up /mnt/data?
+
+  1) Create locally (sudo mkdir + chown)
+     Creates the directory with sudo and sets ownership to your user.
+     Use this for a local disk or partition mounted at a root-owned path.
+
+  2) Mount an NFS share
+     Prompts for server, export path, and NFS version. Installs nfs-common
+     if needed, test-mounts, and adds a persistent fstab entry.
+
+  3) Mount an SMB/CIFS share
+     Prompts for server, share name, and credentials. Installs cifs-utils,
+     stores credentials in $DOCKERDIR/secrets/.smb_credentials (chmod 600),
+     test-mounts, and adds a persistent fstab entry.
+
+  4) Skip — I will set it up manually
+     Continues the install without creating subdirectories. You must create
+     the directory and set ownership before starting containers.
+```
+
+NFS and SMB fstab entries are written with `_netdev,nofail`:
+- `_netdev` — delays the mount until the network is up (prevents boot failure if the NAS isn't immediately reachable)
+- `nofail` — allows the server to boot normally even if the mount fails (NAS down, wrong credentials, etc.)
+
+Once the directory is accessible, the installer creates this subdirectory layout:
+
+```
+/mnt/data/
+├── media/
+│   ├── movies/
+│   ├── tv/
+│   ├── music/
+│   ├── books/
+│   ├── audiobooks/
+│   └── comics/
+├── downloads/
+├── usenet/
+│   ├── incomplete/
+│   └── complete/
+└── torrents/
+    ├── incomplete/
+    └── complete/
+```
+
+Each subdirectory is exposed to the relevant containers as a named variable in your `.env` (`MOVIES_DIR`, `TV_DIR`, `MUSIC_DIR`, `BOOKS_DIR`, `AUDIOBOOKS_DIR`, `COMICS_DIR`). See [Data directories in .env](#data-directories-in-env) below.
 
 ### Traefik access mode (Phase 3)
 
@@ -89,7 +140,8 @@ Portless asks about CrowdSec intrusion prevention **after** you pick your tunnel
 ├── secrets/                          # Credential files (chmod 600)
 │   ├── cf_dns_api_token
 │   ├── basic_auth_credentials
-│   └── tinyauth_secret
+│   ├── tinyauth_secret
+│   └── .smb_credentials              # Written only if SMB mount was chosen
 └── appdata/
     ├── tinyauth/
     │   └── users_file                # TinyAuth user accounts
@@ -105,6 +157,63 @@ Portless asks about CrowdSec intrusion prevention **after** you pick your tunnel
             ├── chain-basic-auth.yml
             ├── chain-default.yml     # Alias for chosen auth system
             └── app-radarr.yml        # Per-app routing rules
+```
+
+## Data directories in .env
+
+The generated `.env` contains named variables for each media type. All paths default to subdirectories under your chosen data directory:
+
+```bash
+DATADIR=/mnt/data            # Root data directory
+
+MOVIES_DIR=/mnt/data/media/movies
+TV_DIR=/mnt/data/media/tv
+MUSIC_DIR=/mnt/data/media/music
+BOOKS_DIR=/mnt/data/media/books
+AUDIOBOOKS_DIR=/mnt/data/media/audiobooks
+COMICS_DIR=/mnt/data/media/comics
+
+DOWNLOADSDIR=/mnt/data/downloads
+```
+
+These are mounted directly into the relevant containers — Radarr gets `$MOVIES_DIR`, Sonarr gets `$TV_DIR`, Lidarr gets `$MUSIC_DIR`, Audiobookshelf gets `$AUDIOBOOKS_DIR`, and so on. Media servers (Plex, Jellyfin, Emby) receive all three of movies/tv/music.
+
+You can edit these paths in `.env` after install if your library is organised differently.
+
+## App API keys in .env
+
+The `.env` also contains placeholders for API keys that tie the stack together. Some are applied automatically; others need to be filled in after first launch.
+
+### Pre-applied at startup (arr stack)
+
+Radarr, Sonarr, Lidarr, and Prowlarr read their own API key from the environment variable on first start. Set these to any value you choose before launching — a UUID works well:
+
+```bash
+RADARR_API_KEY=your-chosen-key
+SONARR_API_KEY=your-chosen-key
+LIDARR_API_KEY=your-chosen-key
+PROWLARR_API_KEY=your-chosen-key
+```
+
+Because you control the value, you can configure Prowlarr, Overseerr, Notifiarr, and other integrations without hunting for keys in each app's UI after the fact.
+
+### Fill in after first launch
+
+These apps generate their own API keys internally. Look them up in each app's **Settings → General** page and paste them into `.env`:
+
+| Variable | App | Where to find it |
+|---|---|---|
+| `SABNZBD_API_KEY` | SABnzbd | Config → General → API Key |
+| `BAZARR_API_KEY` | Bazarr | Settings → General → API Key |
+| `PLEX_TOKEN` | Plex | [support.plex.tv/articles/204059436](https://support.plex.tv/articles/204059436) |
+| `JELLYFIN_API_KEY` | Jellyfin | Dashboard → API Keys |
+| `OVERSEERR_API_KEY` | Overseerr | Settings → General → API Key |
+| `TAUTULLI_API_KEY` | Tautulli | Settings → Web Interface → API Key |
+| `TMDB_API_KEY` | TMDB | [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api) |
+
+After updating `.env`, restart affected containers:
+```bash
+docker compose --env-file ~/docker/.env -f ~/docker/docker-compose-$(hostname).yml up -d
 ```
 
 ## Accessing services

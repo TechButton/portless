@@ -14,8 +14,7 @@ services:
       - "$CALIBREWEB_PORT:8083"
     volumes:
       - $DOCKERDIR/appdata/calibre-web:/config
-      # Map your existing Calibre library (must contain metadata.db):
-      # - /path/to/calibre/library:/books
+      - $BOOKS_DIR:/books
       - /etc/localtime:/etc/localtime:ro
     environment:
       TZ: $TZ

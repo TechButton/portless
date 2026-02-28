@@ -13,13 +13,12 @@ services:
       - "$LIDARR_PORT:8686"
     volumes:
       - $DOCKERDIR/appdata/lidarr:/config
-      - $DATADIR1:/data
-      # - $MEDIADIR2:/data/media2
-      # - $MEDIADIR3:/data/media3
+      - $MUSIC_DIR:/data/music
       - $DOWNLOADSDIR:/data/downloads
       - "/etc/localtime:/etc/localtime:ro"
     environment:
       TZ: $TZ
       PUID: $PUID
       PGID: $PGID
+      LIDARR__Auth__ApiKey: $LIDARR_API_KEY
     # DOCKER-LABELS-PLACEHOLDER

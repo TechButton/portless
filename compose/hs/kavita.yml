@@ -14,9 +14,8 @@ services:
       - "$KAVITA_PORT:5000"
     volumes:
       - $DOCKERDIR/appdata/kavita:/kavita/config
-      # Add your manga/ebook library paths:
-      # - /path/to/manga:/manga
-      # - /path/to/books:/books
+      - $BOOKS_DIR:/books
+      - $COMICS_DIR:/comics
       - /etc/localtime:/etc/localtime:ro
     environment:
       TZ: $TZ

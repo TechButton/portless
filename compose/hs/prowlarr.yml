@@ -19,4 +19,5 @@ services:
       TZ: $TZ
       PUID: $PUID
       PGID: $PGID
+      PROWLARR__Auth__ApiKey: $PROWLARR_API_KEY
     # DOCKER-LABELS-PLACEHOLDER

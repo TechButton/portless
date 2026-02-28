@@ -14,8 +14,8 @@ services:
       - "$KOMGA_PORT:25600"
     volumes:
       - $DOCKERDIR/appdata/komga:/config
-      # Map your comics/manga library:
-      # - /path/to/comics:/comics:ro
+      - $COMICS_DIR:/comics:ro
+      - $BOOKS_DIR:/books:ro
       - /etc/localtime:/etc/localtime:ro
     user: "$PUID:$PGID"
     environment:

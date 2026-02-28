@@ -13,13 +13,12 @@ services:
       - "$SONARR_PORT:8989"
     volumes:
       - $DOCKERDIR/appdata/sonarr:/config
-      - $MEDIADIR1/shows:/data/shows1
-      - $MEDIADIR2/shows:/data/shows2
-      # - $MEDIADIR3:/data/media3
+      - $TV_DIR:/data/tv
       - $DOWNLOADSDIR:/data/downloads
       - "/etc/localtime:/etc/localtime:ro"
     environment:
       TZ: $TZ
       PUID: $PUID
       PGID: $PGID
+      SONARR__Auth__ApiKey: $SONARR_API_KEY
     # DOCKER-LABELS-PLACEHOLDER

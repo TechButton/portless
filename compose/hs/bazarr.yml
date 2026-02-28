@@ -13,9 +13,8 @@ services:
       - "$BAZARR_PORT:6767"
     volumes:
       - $DOCKERDIR/appdata/bazarr:/config
-      - $MEDIADIR1:/data/media1
-      - $MEDIADIR2:/data/media2
-      # - $MEDIADIR3:/data/media3
+      - $MOVIES_DIR:/data/movies
+      - $TV_DIR:/data/tv
     environment:
       TZ: $TZ
       PUID: $PUID

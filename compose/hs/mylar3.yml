@@ -14,9 +14,8 @@ services:
       - "$MYLAR3_PORT:8090"
     volumes:
       - $DOCKERDIR/appdata/mylar3:/config
-      # Map your comics library:
-      # - /path/to/comics:/comics
-      # - /path/to/downloads:/downloads
+      - $COMICS_DIR:/comics
+      - $DOWNLOADSDIR:/downloads
       - /etc/localtime:/etc/localtime:ro
     environment:
       TZ: $TZ

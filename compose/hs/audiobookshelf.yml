@@ -15,9 +15,7 @@ services:
     volumes:
       - $DOCKERDIR/appdata/audiobookshelf:/config
       - $DOCKERDIR/appdata/audiobookshelf/metadata:/metadata
-      # Add your audiobook and podcast library paths:
-      # - /path/to/audiobooks:/audiobooks
-      # - /path/to/podcasts:/podcasts
+      - $AUDIOBOOKS_DIR:/audiobooks
       - /etc/localtime:/etc/localtime:ro
     environment:
       TZ: $TZ
