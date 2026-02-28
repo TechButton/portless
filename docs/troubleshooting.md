@@ -35,20 +35,33 @@ Then re-run `./install.sh` — it will detect the directory is now accessible an
 
 ### NFS mount fails during install
 
-```
-NFS mount failed. Verify the server address, export path, and that this host is allowed.
-```
+The installer now runs `showmount -e <server>` automatically and displays available exports before asking for the path. The export path must match **exactly** what the server publishes — it is the path on the NAS, not a local path.
 
-Check that:
-1. The NFS server is reachable: `ping <server-ip>`
-2. The export is published: `showmount -e <server-ip>` (install `nfs-common` first)
-3. The server's `/etc/exports` includes your host's IP or subnet
-4. The NFS version matches — try version 3 if version 4 fails
+Common NAS formats:
+
+| NAS | Typical export path |
+|---|---|
+| Synology | `/volume1/data` or `/volume1/homes/kyle/media` |
+| TrueNAS | `/mnt/pool/media` |
+| Unraid | `/mnt/user/media` |
+
+If the mount fails, the installer will offer to retry with a corrected path. You can also check manually:
 
 ```bash
-# Test manually
-sudo mount -t nfs -o nfsvers=3 192.168.1.10:/tank/media /mnt/data
+# See what the server actually exports
+showmount -e 192.168.13.6
+
+# Test the mount manually with the exact path from showmount
+sudo mount -t nfs -o nfsvers=4 192.168.13.6:/volume1/mounts /mnt/data
+
+# If version 4 fails, try version 3
+sudo mount -t nfs -o nfsvers=3 192.168.13.6:/volume1/mounts /mnt/data
 ```
+
+Other things to check:
+- The NFS server is reachable: `ping <server-ip>`
+- The server's export allows your host's IP or subnet (check NAS control panel → File Services → NFS)
+- The export has read/write permissions for your user/IP
 
 ### SMB mount fails during install
 

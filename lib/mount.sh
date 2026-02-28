@@ -33,7 +33,7 @@ _mount_nfs() {
   local mountpoint="$1"
   local user="$2"
 
-  # Ensure nfs-common is present
+  # Ensure nfs-common is present (also provides showmount)
   if ! command -v mount.nfs &>/dev/null && ! command -v mount.nfs4 &>/dev/null; then
     _mount_install_pkg "nfs-common"
   fi
@@ -42,7 +42,23 @@ _mount_nfs() {
   local nfs_server="$REPLY"
   [[ -n "$nfs_server" ]] || die "NFS server cannot be empty"
 
-  prompt_input "NFS export path on server (e.g. /mnt/tank/media)" "/mnt/data"
+  # Show available exports so the user knows the exact path to enter.
+  # This is the most common source of confusion — NAS paths look nothing
+  # like local paths (Synology: /volume1/..., TrueNAS: /mnt/pool/...).
+  echo ""
+  log_sub "Querying exports from ${nfs_server}..."
+  if showmount -e "$nfs_server" 2>/dev/null; then
+    echo ""
+  else
+    log_warn "Could not retrieve export list (showmount failed — server may block the query)."
+    log_warn "Common NAS export path formats:"
+    log_warn "  Synology:  /volume1/data   or  /volume1/homes/user/media"
+    log_warn "  TrueNAS:   /mnt/pool/media"
+    log_warn "  Unraid:    /mnt/user/media"
+    echo ""
+  fi
+
+  prompt_input "NFS export path on the server (copy exactly from the list above)" ""
   local nfs_export="$REPLY"
   [[ -n "$nfs_export" ]] || die "NFS export path cannot be empty"
 
@@ -55,11 +71,29 @@ _mount_nfs() {
     sudo mkdir -p "$mountpoint" || die "Failed to create mount point $mountpoint"
   fi
 
-  # Test mount
-  log_sub "Testing NFS mount (${nfs_server}:${nfs_export} → $mountpoint)..."
-  if ! sudo mount -t nfs -o "nfsvers=${nfs_ver}" "${nfs_server}:${nfs_export}" "$mountpoint"; then
-    die "NFS mount failed. Verify the server address, export path, and that this host is allowed in the server's exports."
-  fi
+  # Test mount — retry loop so the user can correct the path without
+  # re-running the whole installer.
+  local mounted=false
+  while true; do
+    log_sub "Testing NFS mount (${nfs_server}:${nfs_export} → $mountpoint)..."
+    if sudo mount -t nfs -o "nfsvers=${nfs_ver}" "${nfs_server}:${nfs_export}" "$mountpoint"; then
+      mounted=true
+      break
+    fi
+
+    log_error "Mount failed. The export path must match exactly what the server publishes."
+    log_warn "Re-run showmount to double-check:  showmount -e ${nfs_server}"
+
+    prompt_yn "Try a different export path?" "Y"
+    if [[ "${REPLY^^}" != "Y" ]]; then
+      die "NFS mount failed. Fix the export path and re-run the installer."
+    fi
+
+    prompt_input "NFS export path on the server" "$nfs_export"
+    nfs_export="$REPLY"
+    [[ -n "$nfs_export" ]] || die "NFS export path cannot be empty"
+  done
+
   log_ok "NFS mount succeeded"
 
   # Grant ownership so the user can write subdirectories
