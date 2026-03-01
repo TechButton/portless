@@ -29,6 +29,25 @@ else
   exit 1
 fi
 
+# Dark color theme — overrides whiptail's default pink/red
+export NEWT_COLORS='
+root=white,black
+window=white,black
+border=cyan,black
+title=cyan,black
+textbox=white,black
+listbox=white,black
+actlistbox=black,cyan
+actsellistbox=black,cyan
+button=black,cyan
+actbutton=black,white
+compactbutton=white,black
+checkbox=white,black
+actcheckbox=black,cyan
+entry=white,black
+label=white,black
+'
+
 # Dimensions helpers
 _W() { echo "${COLUMNS:-80}"; }       # terminal width
 _H() { echo "${LINES:-24}"; }         # terminal height
@@ -84,8 +103,10 @@ _menu() {
 _checklist() {
   local title="$1" prompt="$2"; shift 2
   local nitems=$(( $# / 3 ))
+  # Cap list height so the box doesn't overflow and scrollbar appears
+  local list_h=$(( nitems < BOX_H - 8 ? nitems : BOX_H - 8 ))
   TUI_RESULT=$(
-    $TUI --title "$TITLE — $title" --checklist "$prompt" $BOX_H $BOX_W "$nitems" "$@" 3>&1 1>&2 2>&3
+    $TUI --title "$TITLE — $title" --checklist "$prompt" $BOX_H $BOX_W "$list_h" "$@" 3>&1 1>&2 2>&3
   ) || return 1
 }
 
@@ -94,8 +115,9 @@ _checklist() {
 _radiolist() {
   local title="$1" prompt="$2"; shift 2
   local nitems=$(( $# / 3 ))
+  local list_h=$(( nitems < BOX_H - 8 ? nitems : BOX_H - 8 ))
   TUI_RESULT=$(
-    $TUI --title "$TITLE — $title" --radiolist "$prompt" $BOX_H $BOX_W "$nitems" "$@" 3>&1 1>&2 2>&3
+    $TUI --title "$TITLE — $title" --radiolist "$prompt" $BOX_H $BOX_W "$list_h" "$@" 3>&1 1>&2 2>&3
   ) || return 1
 }
 

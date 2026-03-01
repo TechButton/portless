@@ -44,6 +44,19 @@ _require_app_installed() {
   app_is_installed "$app" || die "App '$app' is not installed. Run: ./manage.sh add $app"
 }
 
+# Strip 'profiles:' lines from compose file so all included services start
+# without needing --profile flags. Safe to run multiple times (idempotent).
+_migrate_compose_strip_profiles() {
+  local compose_file
+  compose_file=$(_compose_file 2>/dev/null) || return 0
+  [[ -f "$compose_file" ]] || return 0
+  if grep -q "^[[:space:]]*profiles:" "$compose_file" 2>/dev/null; then
+    log_sub "Removing docker compose profiles from $(basename "$compose_file") (one-time migration)..."
+    sed -i '/^[[:space:]]*profiles:/d' "$compose_file"
+    log_ok "Profiles removed — all selected services will now start automatically"
+  fi
+}
+
 _compose_file() {
   local dockerdir hostname
   dockerdir=$(state_get '.dockerdir')
@@ -95,6 +108,7 @@ cmd_add() {
   local dockerdir
   dockerdir=$(state_get '.dockerdir')
   local src="${SCRIPT_DIR}/compose/${hostname}/${app}.yml"
+  [[ -f "$src" ]] || src="${SCRIPT_DIR}/compose/hs/${app}.yml"
   [[ -f "$src" ]] || src="${SCRIPT_DIR}/compose/${app}.yml"
 
   if [[ -f "$src" ]]; then
@@ -103,7 +117,9 @@ cmd_add() {
     log_sub "Adding $app service to compose file..."
     echo "" >> "$compose_file"
     echo "  ########## ${app^^} ##########" >> "$compose_file"
-    grep -v "^services:" "$src" >> "$compose_file" || true
+    grep -v "^services:" "$src" \
+      | grep -v "^[[:space:]]*profiles:" \
+      >> "$compose_file" || true
     log_ok "Added $app to $compose_file"
   else
     log_warn "No compose snippet found for '$app' at $src"
@@ -180,6 +196,7 @@ cmd_remove() {
 cmd_update() {
   local target="${1:-}"
   log_step "Updating: ${target:-all services}"
+  _migrate_compose_strip_profiles
 
   if [[ -n "$target" ]]; then
     _require_app_installed "$target"
@@ -829,11 +846,14 @@ EOF
   while IFS= read -r app; do
     [[ -z "$app" ]] && continue
     local src="${SCRIPT_DIR}/compose/${hostname}/${app}.yml"
+    [[ -f "$src" ]] || src="${SCRIPT_DIR}/compose/hs/${app}.yml"
     [[ -f "$src" ]] || src="${SCRIPT_DIR}/compose/${app}.yml"
     if [[ -f "$src" ]]; then
       echo "" >> "$compose_file"
       echo "  ########## ${app^^} ##########" >> "$compose_file"
-      grep -v "^services:" "$src" >> "$compose_file" || true
+      grep -v "^services:" "$src" \
+        | grep -v "^[[:space:]]*profiles:" \
+        >> "$compose_file" || true
     fi
   done <<< "$apps"
 

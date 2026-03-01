@@ -9,9 +9,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+PORTLESS_VERSION="$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "0.5.0")"
+
 # Load libraries
 source "${SCRIPT_DIR}/lib/common.sh"
-HOMELAB_COMMON_LOADED=1
+PORTLESS_COMMON_LOADED=1
 source "${SCRIPT_DIR}/lib/docker.sh"
 source "${SCRIPT_DIR}/lib/state.sh"
 source "${SCRIPT_DIR}/lib/traefik.sh"
@@ -38,10 +40,378 @@ _on_error() {
 }
 trap '_on_error' ERR
 
+# ─── Answers file ────────────────────────────────────────────────────────────────
+#
+# Source portless-answers.sh (or --answers <file>) to pre-fill INSTALL_* variables
+# and skip interactive prompts. Any unset variable falls back to the normal prompt.
+
+_load_answers() {
+  local file="${ANSWERS_FILE:-}"
+  [[ -z "$file" && -f "${SCRIPT_DIR}/portless-answers.sh" ]] && file="${SCRIPT_DIR}/portless-answers.sh"
+  [[ -z "$file" ]] && return 0
+  if [[ ! -f "$file" ]]; then
+    log_warn "Answers file not found: $file"
+    return 0
+  fi
+  log_info "Loading answers from: $file"
+  # shellcheck source=/dev/null
+  source "$file"
+  log_ok "Answers file loaded"
+}
+
+# ─── Phase completion tracking ────────────────────────────────────────────────────
+#
+# Phase markers are written to the state JSON so the installer can resume from
+# where it left off after an interruption.
+
+_phase_complete() {
+  [[ -f "${STATE_FILE:-}" ]] || return 0
+  state_set ".install.phases.$1 = true"
+}
+
+_phase_is_done() {
+  [[ -f "${STATE_FILE:-}" ]] || return 1
+  [[ "$(state_get ".install.phases.$1 // false")" == "true" ]]
+}
+
+# ─── Resume support ───────────────────────────────────────────────────────────────
+#
+# On startup, look for an existing state file at the default Docker directory.
+# If an in-progress install is found, offer to restore all config and skip done phases.
+
+_check_resume() {
+  local default_dockerdir="${INSTALL_DOCKERDIR:-$HOME/docker}"
+  local candidate="${default_dockerdir}/.portless-state.json"
+  [[ -f "$candidate" ]] || return 0
+
+  # Only offer resume if at least one phase was completed
+  local phases_done
+  phases_done=$(jq -r '.install.phases // {} | to_entries | map(select(.value == true)) | length' \
+    "$candidate" 2>/dev/null || echo "0")
+  [[ "$phases_done" -gt 0 ]] || return 0
+
+  # If all five phases are done this is a complete install — don't offer resume
+  local all_done
+  all_done=$(jq -r '
+    (.install.phases.phase2 == true) and
+    (.install.phases.phase3 == true) and
+    (.install.phases.phase4 == true) and
+    (.install.phases.phase5 == true)
+  ' "$candidate" 2>/dev/null || echo "false")
+  if [[ "$all_done" == "true" ]]; then
+    log_info "A completed install was found. Starting a fresh install will overwrite it."
+    prompt_yn "Start fresh anyway?" "N" || true
+    if [[ "${REPLY^^}" != "Y" ]]; then
+      log_info "Use ./manage.sh to manage your existing stack."
+      exit 0
+    fi
+    return 0
+  fi
+
+  local hostname domain
+  hostname=$(jq -r '.hostname // "unknown"' "$candidate" 2>/dev/null)
+  domain=$(jq -r '.domain // "not yet set"' "$candidate" 2>/dev/null)
+
+  echo ""
+  log_info "Found an in-progress installation:"
+  echo -e "  Hostname: ${CYAN}${hostname}${RESET}"
+  echo -e "  Domain:   ${CYAN}${domain}${RESET}"
+  echo -e "  State:    ${CYAN}${candidate}${RESET}"
+  echo ""
+  prompt_yn "Resume from where you left off?" "Y" || true
+  [[ "${REPLY^^}" == "Y" ]] && _restore_cfg_from_state "$candidate"
+}
+
+_restore_cfg_from_state() {
+  local sf="$1"
+  CFG_DOCKERDIR=$(jq -r '.dockerdir // empty' "$sf" 2>/dev/null)
+  [[ -n "$CFG_DOCKERDIR" ]] || { log_warn "Could not read dockerdir from state — starting fresh"; return 1; }
+
+  CFG_HOSTNAME=$(jq -r '.hostname // empty' "$sf" 2>/dev/null)
+  CFG_USER=$(jq -r '.install.user // empty' "$sf" 2>/dev/null)
+  CFG_PUID=$(jq -r '.install.puid // 1000' "$sf" 2>/dev/null)
+  CFG_PGID=$(jq -r '.install.pgid // 1000' "$sf" 2>/dev/null)
+  CFG_TIMEZONE=$(jq -r '.install.timezone // empty' "$sf" 2>/dev/null)
+  CFG_DATADIR=$(jq -r '.install.datadir // empty' "$sf" 2>/dev/null)
+  CFG_DOMAIN=$(jq -r '.domain // empty' "$sf" 2>/dev/null)
+  CFG_CF_EMAIL=$(jq -r '.install.cf_email // empty' "$sf" 2>/dev/null)
+  CFG_SERVER_IP=$(jq -r '.server_ip // empty' "$sf" 2>/dev/null)
+  CFG_DNS_PROVIDER=$(jq -r '.install.dns_provider // empty' "$sf" 2>/dev/null)
+  CFG_DOWNLOADSDIR=$(jq -r '.install.downloadsdir // empty' "$sf" 2>/dev/null)
+  TRAEFIK_ACCESS_MODE=$(jq -r '.traefik.access_mode // empty' "$sf" 2>/dev/null)
+  TRAEFIK_AUTH_SYSTEM=$(jq -r '.traefik.auth_system // empty' "$sf" 2>/dev/null)
+  TUNNEL_METHOD=$(jq -r '.tunnel.method // empty' "$sf" 2>/dev/null)
+  mapfile -t CFG_SELECTED_APPS < <(jq -r '.install.selected_apps // [] | .[]' "$sf" 2>/dev/null)
+
+  # Reconnect to the existing state file
+  state_init "$CFG_DOCKERDIR"
+
+  log_ok "Resumed from previous installation"
+  log_info "  Hostname: ${CFG_HOSTNAME}  |  User: ${CFG_USER}  |  Domain: ${CFG_DOMAIN:-not yet set}"
+}
+
+# ─── Migration from old server ───────────────────────────────────────────────────
+#
+# Called after phase 2 (so CFG_DOCKERDIR is known) but before phase 3.
+# Offers two paths: SSH pull (automatic) or manual drop folder.
+# Tracked in state so it never asks again after the first answer.
+
+_migrate_from_old_server() {
+  # Skip if already answered (prevents re-prompting on resume)
+  if [[ "$(state_get '.install.migration_done // false')" == "true" ]]; then
+    return 0
+  fi
+
+  log_blank
+  prompt_yn "Are you migrating from an existing server?" "N" || true
+  if [[ "${REPLY^^}" != "Y" ]]; then
+    state_set ".install.migration_done = true"
+    return 0
+  fi
+
+  log_step "Migration: Copy Data from Old Server"
+  echo -e "  ${DIM}Stop containers on the old server first to avoid database corruption.${RESET}"
+  echo ""
+
+  # ── Ensure rsync is available ───────────────────────────────────────────────
+  if ! command -v rsync &>/dev/null; then
+    log_sub "Installing rsync..."
+    sudo apt-get install -y -q rsync >> "$LOG_FILE" 2>&1 \
+      || die "rsync not found and could not be installed. Install it manually: sudo apt-get install rsync"
+    log_ok "rsync installed"
+  fi
+
+  prompt_select "How do you want to transfer files?" \
+    "Pull automatically via SSH from the old server" \
+    "Copy files manually to a drop folder on this server"
+
+  if [[ "$REPLY" == Pull* ]]; then
+    _migrate_via_ssh
+  else
+    _migrate_via_drop_folder
+  fi
+}
+
+_migrate_via_ssh() {
+  echo -e "  ${DIM}rsync will pull your old appdata and secrets directly over SSH.${RESET}"
+  echo ""
+
+  prompt_input "Old server hostname or IP" ""
+  local old_host="$REPLY"
+  [[ -n "$old_host" ]] || { log_warn "No host entered — skipping migration"; state_set ".install.migration_done = true"; return 0; }
+
+  prompt_input "SSH username on old server" "$CFG_USER"
+  local old_user="$REPLY"
+
+  prompt_input "SSH port" "22"
+  local old_port="$REPLY"
+
+  prompt_input "Path to SSH private key" "$HOME/.ssh/id_rsa"
+  local old_key="$REPLY"
+
+  if [[ ! -f "$old_key" ]]; then
+    log_warn "Key not found: $old_key"
+    log_info "To set up key access from this server:"
+    log_info "  ssh-keygen -t ed25519 -f $HOME/.ssh/id_rsa"
+    log_info "  ssh-copy-id -i ${old_key}.pub ${old_user}@${old_host}"
+    log_blank
+    prompt_select "What would you like to do?" \
+      "Switch to manual drop folder instead" \
+      "Skip migration for now"
+    case "$REPLY" in
+      Switch*) _migrate_via_drop_folder; return ;;
+      *)       state_set ".install.migration_done = true"; return 0 ;;
+    esac
+  fi
+
+  local ssh_opts="-i ${old_key} -p ${old_port} -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o BatchMode=yes"
+
+  log_sub "Testing SSH connection to ${old_user}@${old_host}..."
+  # shellcheck disable=SC2086
+  if ! ssh $ssh_opts "${old_user}@${old_host}" "echo OK" &>/dev/null; then
+    log_error "Cannot connect to ${old_user}@${old_host}:${old_port} with key ${old_key}"
+    log_warn "From the OLD server, run:"
+    log_warn "  ssh-copy-id -i ${old_key}.pub ${old_user}@$(hostname -I | awk '{print $1}')"
+    log_blank
+    prompt_select "What would you like to do?" \
+      "Switch to manual drop folder instead" \
+      "Skip migration for now"
+    case "$REPLY" in
+      Switch*) _migrate_via_drop_folder; return ;;
+      *)       state_set ".install.migration_done = true"; return 0 ;;
+    esac
+  fi
+  log_ok "SSH connection successful"
+
+  prompt_input "Docker directory on old server" "~/docker"
+  local old_dockerdir="$REPLY"
+
+  echo ""
+  log_info "Will copy from ${old_user}@${old_host}:${old_dockerdir} → ${CFG_DOCKERDIR}:"
+  echo -e "  ${DIM}appdata/  — app databases, Plex metadata, Sonarr/Radarr libraries${RESET}"
+  echo -e "  ${DIM}secrets/  — Cloudflare token, auth credentials${RESET}"
+  echo -e "  ${DIM}(Plex Cache and Codecs are skipped — they regenerate automatically)${RESET}"
+  echo ""
+
+  prompt_yn "Start copying now? (can take a while for large Plex libraries)" "Y" || true
+  if [[ "${REPLY^^}" != "Y" ]]; then
+    log_sub "Migration skipped"
+    state_set ".install.migration_done = true"
+    return 0
+  fi
+
+  log_sub "Copying appdata... (progress in ${LOG_FILE})"
+  if rsync -avz --progress \
+      -e "ssh $ssh_opts" \
+      --exclude 'plex/Library/Application Support/Plex Media Server/Cache/' \
+      --exclude 'plex/Library/Application Support/Plex Media Server/Codecs/' \
+      "${old_user}@${old_host}:${old_dockerdir}/appdata/" \
+      "${CFG_DOCKERDIR}/appdata/" \
+      >> "$LOG_FILE" 2>&1; then
+    log_ok "appdata copied"
+  else
+    log_warn "appdata rsync completed with some errors — check ${LOG_FILE}"
+  fi
+
+  log_sub "Copying secrets..."
+  if rsync -avz \
+      -e "ssh $ssh_opts" \
+      "${old_user}@${old_host}:${old_dockerdir}/secrets/" \
+      "${CFG_DOCKERDIR}/secrets/" \
+      >> "$LOG_FILE" 2>&1; then
+    log_ok "Secrets copied"
+  else
+    log_warn "Secrets rsync had errors — check ${LOG_FILE}"
+  fi
+
+  _migrate_finish
+}
+
+_migrate_via_drop_folder() {
+  local drop_dir="/tmp/portless-migration"
+  local new_server_ip
+  new_server_ip=$(hostname -I | awk '{print $1}')
+
+  echo ""
+  log_info "Drop folder: ${BOLD}${drop_dir}${RESET}"
+  echo ""
+  echo -e "  Copy your old ${BOLD}appdata/${RESET} and ${BOLD}secrets/${RESET} folders into ${CYAN}${drop_dir}${RESET} on this server."
+  echo -e "  The structure should look like:"
+  echo -e ""
+  echo -e "  ${DIM}${drop_dir}/${RESET}"
+  echo -e "  ${DIM}├── appdata/${RESET}"
+  echo -e "  ${DIM}└── secrets/${RESET}"
+  echo ""
+  echo -e "  ${BOLD}Ways to get files here:${RESET}"
+  echo ""
+  echo -e "  ${BOLD}From the old server${RESET} (run on the old server):"
+  echo -e "  ${CYAN}  rsync -avz ~/docker/appdata/ ${CFG_USER}@${new_server_ip}:${drop_dir}/appdata/${RESET}"
+  echo -e "  ${CYAN}  rsync -avz ~/docker/secrets/ ${CFG_USER}@${new_server_ip}:${drop_dir}/secrets/${RESET}"
+  echo ""
+  echo -e "  ${BOLD}USB drive${RESET} (run on this server after plugging in the drive):"
+  echo -e "  ${CYAN}  mkdir -p ${drop_dir}${RESET}"
+  echo -e "  ${CYAN}  cp -r /media/usb/appdata /media/usb/secrets ${drop_dir}/${RESET}"
+  echo ""
+  echo -e "  ${BOLD}SCP from old server${RESET}:"
+  echo -e "  ${CYAN}  scp -r ~/docker/appdata ~/docker/secrets ${CFG_USER}@${new_server_ip}:${drop_dir}/${RESET}"
+  echo ""
+  echo -e "  ${DIM}Leave this installer running — it will wait for you.${RESET}"
+  echo ""
+
+  prompt_yn "Press Y once the files are in place and ready to import" "Y" || true
+  if [[ "${REPLY^^}" != "Y" ]]; then
+    log_warn "Migration skipped — re-run the installer to try again."
+    state_set ".install.migration_done = true"
+    return 0
+  fi
+
+  prompt_input "Drop folder path" "$drop_dir"
+  drop_dir="${REPLY%/}"
+
+  if [[ ! -d "$drop_dir" ]]; then
+    log_error "Folder not found: $drop_dir"
+    log_warn "Migration skipped — re-run the installer once the files are in place."
+    state_set ".install.migration_done = true"
+    return 0
+  fi
+
+  local found_something=0
+
+  if [[ -d "${drop_dir}/appdata" ]]; then
+    log_sub "Copying appdata..."
+    if rsync -a --progress \
+        --exclude 'plex/Library/Application Support/Plex Media Server/Cache/' \
+        --exclude 'plex/Library/Application Support/Plex Media Server/Codecs/' \
+        "${drop_dir}/appdata/" \
+        "${CFG_DOCKERDIR}/appdata/" \
+        >> "$LOG_FILE" 2>&1; then
+      log_ok "appdata copied"
+      (( found_something++ )) || true
+    else
+      log_warn "appdata copy completed with some errors — check ${LOG_FILE}"
+    fi
+  else
+    log_warn "No appdata/ folder found in ${drop_dir} — skipped"
+  fi
+
+  if [[ -d "${drop_dir}/secrets" ]]; then
+    log_sub "Copying secrets..."
+    if rsync -a \
+        "${drop_dir}/secrets/" \
+        "${CFG_DOCKERDIR}/secrets/" \
+        >> "$LOG_FILE" 2>&1; then
+      log_ok "Secrets copied"
+      (( found_something++ )) || true
+    else
+      log_warn "Secrets copy had errors — check ${LOG_FILE}"
+    fi
+  else
+    log_warn "No secrets/ folder found in ${drop_dir} — skipped"
+  fi
+
+  if (( found_something > 0 )); then
+    _migrate_finish
+    prompt_yn "Delete the drop folder now that files are imported?" "Y" || true
+    [[ "${REPLY^^}" == "Y" ]] && rm -rf "$drop_dir" && log_sub "Drop folder removed"
+  else
+    log_warn "Nothing was copied — check that appdata/ and secrets/ exist in ${drop_dir}."
+    log_warn "Re-run the installer to try again."
+    state_set ".install.migration_done = true"
+  fi
+}
+
+_migrate_finish() {
+  # Fix permissions on anything we just copied in
+  chmod 600 "${CFG_DOCKERDIR}/secrets/"* 2>/dev/null || true
+  local acme_json="${CFG_DOCKERDIR}/appdata/traefik3/acme/acme.json"
+  [[ -f "$acme_json" ]] && chmod 600 "$acme_json"
+  sudo chown -R "${CFG_USER}:${CFG_USER}" "${CFG_DOCKERDIR}/appdata/" 2>/dev/null || true
+  sudo chown -R "${CFG_USER}:${CFG_USER}" "${CFG_DOCKERDIR}/secrets/" 2>/dev/null || true
+
+  state_set ".install.migration_done = true"
+  log_ok "Migration complete"
+  echo ""
+  log_info "Your old app data is now in place. The installer will continue configuring"
+  log_info "this server. After install, update SERVER_LAN_IP in ~/docker/.env if it changed."
+  log_blank
+}
+
 # ─── Entry point ─────────────────────────────────────────────────────────────────
 
 main() {
-  banner "portless Setup Wizard"
+  # ── Argument parsing ────────────────────────────────────────────────────────
+  ANSWERS_FILE=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --answers=*) ANSWERS_FILE="${1#--answers=}"; shift ;;
+      --answers)   ANSWERS_FILE="${2:-}"; shift 2 ;;
+      *)           shift ;;
+    esac
+  done
+
+  _load_answers
+
+  banner "portless Setup Wizard  v${PORTLESS_VERSION}"
   echo -e "  Works with ${BOLD}any ISP${RESET} — no port forwarding or firewall changes needed."
   echo -e "  Choose your remote access method: ${BOLD}Cloudflare Tunnel${RESET} (free, easiest),"
   echo -e "  ${BOLD}Pangolin${RESET} or ${BOLD}Headscale${RESET} (self-hosted VPS), ${BOLD}Tailscale${RESET} or ${BOLD}Netbird${RESET} (VPN mesh)."
@@ -50,11 +420,56 @@ main() {
   echo -e "  ${DIM}Logs → ${LOG_FILE}${RESET}"
   echo ""
 
+  _check_resume
+
+  # ── Phase 1 — always run (system checks, no interactive questions) ──────────
   phase1_system_check
-  phase2_basic_config
-  phase3_domain_network
-  phase4_app_selection
-  phase5_remote_access
+
+  # ── Phase 2 ─────────────────────────────────────────────────────────────────
+  if _phase_is_done "phase2"; then
+    log_step "Phase 2: Basic Configuration"
+    log_ok "Already complete — hostname: ${CFG_HOSTNAME}  user: ${CFG_USER}"
+    state_init "$CFG_DOCKERDIR"   # reconnect state
+  else
+    phase2_basic_config
+    _phase_complete "phase1"      # state now exists; retroactively mark phase1
+    _phase_complete "phase2"
+  fi
+
+  # ── Migration (one-time prompt before phase 3 runs) ─────────────────────────
+  if ! _phase_is_done "phase3"; then
+    _migrate_from_old_server
+  fi
+
+  # ── Phase 3 ─────────────────────────────────────────────────────────────────
+  if _phase_is_done "phase3"; then
+    log_step "Phase 3: Domain & Network"
+    log_ok "Already complete — domain: ${CFG_DOMAIN}  IP: ${CFG_SERVER_IP}"
+  else
+    phase3_domain_network
+    _phase_complete "phase3"
+  fi
+
+  # ── Phase 4 ─────────────────────────────────────────────────────────────────
+  if _phase_is_done "phase4"; then
+    log_step "Phase 4: App Selection"
+    mapfile -t CFG_SELECTED_APPS < <(state_get '.install.selected_apps // [] | .[]' 2>/dev/null)
+    log_ok "Already complete — ${#CFG_SELECTED_APPS[@]} app(s): ${CFG_SELECTED_APPS[*]:-none}"
+  else
+    phase4_app_selection
+    _phase_complete "phase4"
+  fi
+
+  # ── Phase 5 ─────────────────────────────────────────────────────────────────
+  if _phase_is_done "phase5"; then
+    log_step "Phase 5: Remote Access"
+    TUNNEL_METHOD="${TUNNEL_METHOD:-$(state_get '.tunnel.method')}"
+    log_ok "Already complete — method: ${TUNNEL_METHOD}"
+  else
+    phase5_remote_access
+    _phase_complete "phase5"
+  fi
+
   traefik_ask_crowdsec   # after tunnel is known — behaviour changes based on tunnel type
   phase6_generate_deploy
 
@@ -145,35 +560,43 @@ phase2_basic_config() {
 
   # Hostname / server nickname
   local default_hostname
-  default_hostname=$(hostname -s 2>/dev/null || echo "homelab")
-  prompt_input "Server nickname (used in file/folder names)" "$default_hostname"
+  default_hostname=$(hostname -s 2>/dev/null || echo "portless")
+  ans_prompt_input "HOSTNAME" "Server nickname (used in file/folder names)" "$default_hostname"
   CFG_HOSTNAME="${REPLY,,}"  # lowercase
   CFG_HOSTNAME="${CFG_HOSTNAME//[^a-z0-9-]/-}"  # sanitize
 
   # Linux user
-  prompt_input "Linux username" "$DETECTED_USER"
+  ans_prompt_input "USER" "Linux username" "$DETECTED_USER"
   CFG_USER="$REPLY"
   CFG_PUID=$(id -u "$CFG_USER" 2>/dev/null || echo "$DETECTED_PUID")
   CFG_PGID=$(id -g "$CFG_USER" 2>/dev/null || echo "$DETECTED_PGID")
   log_info "PUID=$CFG_PUID  PGID=$CFG_PGID"
 
   # Timezone
-  prompt_input "Timezone" "$DETECTED_TZ"
+  ans_prompt_input "TIMEZONE" "Timezone" "$DETECTED_TZ"
   CFG_TIMEZONE="$REPLY"
 
   # Docker directory
   local default_dockerdir="/home/${CFG_USER}/docker"
-  prompt_input "Docker data directory (will be created if needed)" "$default_dockerdir"
+  ans_prompt_input "DOCKERDIR" "Docker data directory (will be created if needed)" "$default_dockerdir"
   CFG_DOCKERDIR="$REPLY"
 
   # Data directory (for media files)
-  prompt_input "Media/data directory (where your movies, TV, etc. live)" "/mnt/data"
-  CFG_DATADIR="$REPLY"
+  ans_prompt_input "DATADIR" "Media/data directory (where your movies, TV, etc. live)" "/mnt/data"
+  CFG_DATADIR="${REPLY%/}"   # strip trailing slash to avoid double-slash in paths
 
   # Initialize state
   state_init "$CFG_DOCKERDIR"
   state_set_kv "hostname" "$CFG_HOSTNAME"
   state_set_kv "dockerdir" "$CFG_DOCKERDIR"
+  # Save phase 2 vars for resume
+  state_set "
+    .install.user     = \"$CFG_USER\" |
+    .install.puid     = $CFG_PUID |
+    .install.pgid     = $CFG_PGID |
+    .install.timezone = \"$CFG_TIMEZONE\" |
+    .install.datadir  = \"$CFG_DATADIR\"
+  "
 
   # Create Docker directory structure first — secrets dir must exist before
   # setup_data_dir runs so SMB credentials can be written there.
@@ -187,20 +610,19 @@ phase2_basic_config() {
   # Set up data directory — handles NFS/SMB mounts and sudo-create for
   # paths like /mnt/data that are under root-owned mount points.
   if setup_data_dir "$CFG_DATADIR" "$CFG_USER" "$CFG_DOCKERDIR"; then
-    # For NFS per-share mounts these dirs already exist and ensure_dir is a no-op.
-    # For local/sudo/SMB setups they are created here.
-    log_sub "Creating subdirectories under $CFG_DATADIR..."
-    ensure_dir "${CFG_DATADIR}/movies"
-    ensure_dir "${CFG_DATADIR}/tv"
-    ensure_dir "${CFG_DATADIR}/music"
-    ensure_dir "${CFG_DATADIR}/books"
-    ensure_dir "${CFG_DATADIR}/audiobooks"
-    ensure_dir "${CFG_DATADIR}/comics"
-    ensure_dir "${CFG_DATADIR}/downloads"
-    ensure_dir "${CFG_DATADIR}/usenet/incomplete"
-    ensure_dir "${CFG_DATADIR}/usenet/complete"
-    ensure_dir "${CFG_DATADIR}/torrents/incomplete"
-    ensure_dir "${CFG_DATADIR}/torrents/complete"
+    # Create any subdirs that weren't already mounted (NFS per-share mounts skip existing dirs).
+    # Use sudo because the data root (e.g. /media, /mnt/data) is often root-owned.
+    log_sub "Creating subdirectories under ${CFG_DATADIR}..."
+    local subdir
+    for subdir in movies tv music books audiobooks comics downloads \
+                  usenet/incomplete usenet/complete \
+                  torrents/incomplete torrents/complete; do
+      local full_path="${CFG_DATADIR}/${subdir}"
+      if [[ ! -d "$full_path" ]]; then
+        sudo mkdir -p "$full_path" || log_warn "Could not create ${full_path}"
+        sudo chown "${CFG_USER}:${CFG_USER}" "$full_path" 2>/dev/null || true
+      fi
+    done
   fi
 
   # Create acme.json for Traefik TLS
@@ -221,50 +643,59 @@ phase3_domain_network() {
   log_step "Phase 3: Domain & Network"
 
   # Domain name
-  while true; do
-    prompt_input "Your domain name (e.g. example.com)" ""
-    CFG_DOMAIN="$REPLY"
-    if validate_domain "$CFG_DOMAIN"; then
-      break
-    fi
-    log_warn "Invalid domain format. Example: example.com or mydomain.co.uk"
-  done
+  if [[ -n "${INSTALL_DOMAIN:-}" ]]; then
+    CFG_DOMAIN="$INSTALL_DOMAIN"
+    log_sub "Domain: $CFG_DOMAIN  ${DIM}(answers file)${RESET}"
+    validate_domain "$CFG_DOMAIN" || die "INSTALL_DOMAIN='$CFG_DOMAIN' is not a valid domain name"
+  else
+    while true; do
+      prompt_input "Your domain name (e.g. example.com)" ""
+      CFG_DOMAIN="$REPLY"
+      validate_domain "$CFG_DOMAIN" && break
+      log_warn "Invalid domain format. Example: example.com or mydomain.co.uk"
+    done
+  fi
 
   # DNS provider
   echo ""
-  prompt_select "DNS provider for Traefik automatic TLS:" \
+  ans_prompt_select "DNS_PROVIDER" "DNS provider for Traefik automatic TLS:" \
     "Cloudflare (recommended — automatic wildcard certs)" \
     "Manual / Other (you'll manage DNS yourself)"
   CFG_DNS_PROVIDER="$REPLY"
 
   if [[ "$CFG_DNS_PROVIDER" == Cloudflare* ]]; then
-    echo ""
-    echo -e "${DIM}You need a Cloudflare API token with Zone:DNS:Edit permission.${RESET}"
-    echo -e "${DIM}Create one at: https://dash.cloudflare.com/profile/api-tokens${RESET}"
-    echo ""
-    while true; do
-      prompt_secret "Cloudflare API Token"
-      CFG_CF_TOKEN="$REPLY"
-      if [[ ${#CFG_CF_TOKEN} -gt 10 ]]; then
-        # Quick validation
-        log_sub "Validating Cloudflare token..."
-        local cf_status
-        cf_status=$(curl -sf -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-          -H "Authorization: Bearer ${CFG_CF_TOKEN}" \
-          -H "Content-Type: application/json" 2>/dev/null | jq -r '.result.status // empty')
-        if [[ "$cf_status" == "active" ]]; then
-          log_ok "Cloudflare token is valid"
-          break
+    # Cloudflare API token
+    if [[ -n "${INSTALL_CF_TOKEN:-}" ]]; then
+      CFG_CF_TOKEN="$INSTALL_CF_TOKEN"
+      log_sub "Cloudflare token: ***  ${DIM}(answers file)${RESET}"
+    else
+      echo ""
+      echo -e "${DIM}You need a Cloudflare API token with Zone:DNS:Edit permission.${RESET}"
+      echo -e "${DIM}Create one at: https://dash.cloudflare.com/profile/api-tokens${RESET}"
+      echo ""
+      while true; do
+        prompt_secret "Cloudflare API Token"
+        CFG_CF_TOKEN="$REPLY"
+        if [[ ${#CFG_CF_TOKEN} -gt 10 ]]; then
+          log_sub "Validating Cloudflare token..."
+          local cf_status
+          cf_status=$(curl -sf -X GET "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+            -H "Authorization: Bearer ${CFG_CF_TOKEN}" \
+            -H "Content-Type: application/json" 2>/dev/null | jq -r '.result.status // empty')
+          if [[ "$cf_status" == "active" ]]; then
+            log_ok "Cloudflare token is valid"
+            break
+          else
+            log_warn "Token validation failed (or no internet). Continue anyway? "
+            prompt_yn "Use this token anyway?" "N" && break
+          fi
         else
-          log_warn "Token validation failed (or no internet). Continue anyway? "
-          prompt_yn "Use this token anyway?" "N" && break
+          log_warn "Token seems too short. Please re-enter."
         fi
-      else
-        log_warn "Token seems too short. Please re-enter."
-      fi
-    done
+      done
+    fi
 
-    prompt_input "Cloudflare account email" ""
+    ans_prompt_input "CF_EMAIL" "Cloudflare account email" ""
     CFG_CF_EMAIL="$REPLY"
   else
     CFG_CF_TOKEN="CHANGE_ME"
@@ -276,7 +707,7 @@ phase3_domain_network() {
   # Server LAN IP
   detect_lan_ip
   echo ""
-  prompt_input "Server LAN IP address" "$DETECTED_LAN_IP"
+  ans_prompt_input "SERVER_IP" "Server LAN IP address" "$DETECTED_LAN_IP"
   CFG_SERVER_IP="$REPLY"
   while ! validate_ip "$CFG_SERVER_IP"; do
     log_warn "Invalid IP address format"
@@ -287,14 +718,43 @@ phase3_domain_network() {
   # Save to state
   state_set_kv "domain" "$CFG_DOMAIN"
   state_set_kv "server_ip" "$CFG_SERVER_IP"
+  state_set "
+    .install.cf_email     = \"${CFG_CF_EMAIL:-}\" |
+    .install.dns_provider = \"$CFG_DNS_PROVIDER\"
+  "
 
   log_ok "Domain & network configured"
 
-  # ── Traefik access mode and auth system ──────────────────────────────────────
-  # Note: traefik_ask_crowdsec is called AFTER phase5 (remote access) so we
-  # know the tunnel type and can give appropriate advice.
-  traefik_setup_wizard
-  traefik_select_auth
+  # ── Traefik access mode ───────────────────────────────────────────────────────
+  # If INSTALL_TRAEFIK_MODE is set, skip the interactive wizard.
+  if [[ -n "${INSTALL_TRAEFIK_MODE:-}" ]]; then
+    case "${INSTALL_TRAEFIK_MODE,,}" in
+      hybrid) TRAEFIK_ACCESS_MODE="hybrid" ;;
+      local)  TRAEFIK_ACCESS_MODE="local" ;;
+      *)      TRAEFIK_ACCESS_MODE="hybrid"
+              log_warn "Unknown INSTALL_TRAEFIK_MODE='$INSTALL_TRAEFIK_MODE' — defaulting to hybrid" ;;
+    esac
+    state_set ".traefik.access_mode = \"$TRAEFIK_ACCESS_MODE\""
+    log_sub "Traefik mode: $TRAEFIK_ACCESS_MODE  ${DIM}(answers file)${RESET}"
+  else
+    traefik_setup_wizard
+  fi
+
+  # ── Auth system ───────────────────────────────────────────────────────────────
+  # Note: traefik_ask_crowdsec is called AFTER phase5 so we know the tunnel type.
+  if [[ -n "${INSTALL_AUTH_SYSTEM:-}" ]]; then
+    case "${INSTALL_AUTH_SYSTEM,,}" in
+      tinyauth) TRAEFIK_AUTH_SYSTEM="tinyauth" ;;
+      basic)    TRAEFIK_AUTH_SYSTEM="basic" ;;
+      none)     TRAEFIK_AUTH_SYSTEM="none" ;;
+      *)        TRAEFIK_AUTH_SYSTEM="tinyauth"
+                log_warn "Unknown INSTALL_AUTH_SYSTEM='$INSTALL_AUTH_SYSTEM' — defaulting to tinyauth" ;;
+    esac
+    state_set ".traefik.auth_system = \"$TRAEFIK_AUTH_SYSTEM\""
+    log_sub "Auth system: $TRAEFIK_AUTH_SYSTEM  ${DIM}(answers file)${RESET}"
+  else
+    traefik_select_auth
+  fi
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -323,34 +783,45 @@ phase4_app_selection() {
 
   CFG_SELECTED_APPS=()
 
-  for category in MEDIA ARR DOWNLOADS MANAGEMENT REQUESTS OTHER; do
-    echo -e "  ${BOLD}[${category}]${RESET}"
-    local apps_in_cat
-    read -ra apps_in_cat <<< "${CATEGORY_APPS[$category]}"
-
-    local display_names=()
-    for app in "${apps_in_cat[@]}"; do
-      local desc=""
-      local catalog="${SCRIPT_DIR}/lib/apps/${app}.sh"
-      if [[ -f "$catalog" ]]; then
-        # shellcheck source=/dev/null
-        APP_DESCRIPTION=""
-        source "$catalog"
-        desc="$APP_DESCRIPTION"
-      fi
-      display_names+=("${app} — ${desc}")
+  if [[ -n "${INSTALL_APPS:-}" ]]; then
+    # Non-interactive: parse comma-separated app list from answers file
+    log_sub "Apps from answers file: $INSTALL_APPS"
+    IFS=',' read -ra _ans_apps <<< "$INSTALL_APPS"
+    for _app in "${_ans_apps[@]}"; do
+      _app="${_app//[[:space:]]/}"
+      [[ -n "$_app" ]] && CFG_SELECTED_APPS+=("$_app")
     done
+  else
+    # Interactive: category-by-category checklist
+    for category in MEDIA ARR DOWNLOADS MANAGEMENT REQUESTS OTHER; do
+      echo -e "  ${BOLD}[${category}]${RESET}"
+      local apps_in_cat
+      read -ra apps_in_cat <<< "${CATEGORY_APPS[$category]}"
 
-    prompt_checklist "Select ${category} apps (or press Enter to skip):" "${display_names[@]}"
+      local display_names=()
+      for app in "${apps_in_cat[@]}"; do
+        local desc=""
+        local catalog="${SCRIPT_DIR}/lib/apps/${app}.sh"
+        if [[ -f "$catalog" ]]; then
+          # shellcheck source=/dev/null
+          APP_DESCRIPTION=""
+          source "$catalog"
+          desc="$APP_DESCRIPTION"
+        fi
+        display_names+=("${app} — ${desc}")
+      done
 
-    for selected in "${SELECTED_ITEMS[@]}"; do
-      # Extract app name (before ' — ')
-      local app_name="${selected%% —*}"
-      app_name="${app_name%% }"  # trim trailing space
-      CFG_SELECTED_APPS+=("$app_name")
+      prompt_checklist "Select ${category} apps (or press Enter to skip):" "${display_names[@]}"
+
+      for selected in "${SELECTED_ITEMS[@]}"; do
+        # Extract app name (before ' — ')
+        local app_name="${selected%% —*}"
+        app_name="${app_name%% }"  # trim trailing space
+        CFG_SELECTED_APPS+=("$app_name")
+      done
+      echo ""
     done
-    echo ""
-  done
+  fi
 
   # Assign ports, check for conflicts
   log_sub "Checking port assignments..."
@@ -387,6 +858,11 @@ phase4_app_selection() {
 
     log_sub "  ${app}: port ${port} → https://${APP_DEFAULT_SUBDOMAIN}.${CFG_DOMAIN}"
   done
+
+  # Save to state for resume
+  local _apps_json
+  _apps_json=$(printf '%s\n' "${CFG_SELECTED_APPS[@]}" | jq -R . | jq -s .)
+  state_set ".install.selected_apps = ${_apps_json}"
 
   log_ok "App selection complete: ${#CFG_SELECTED_APPS[@]} apps selected"
 }
@@ -438,7 +914,7 @@ phase5_remote_access() {
 
 EOF
 
-  prompt_select "Remote access method:" \
+  ans_prompt_select "TUNNEL" "Remote access method:" \
     "Cloudflare Tunnel (free, no VPS, public URLs)" \
     "Pangolin on a VPS (~\$18/year, self-hosted, public URLs)" \
     "Tailscale (free, private VPN, no public URLs)" \
@@ -575,9 +1051,10 @@ _gen_env_file() {
   local env_file="${CFG_DOCKERDIR}/.env"
   backup_file "$env_file"
 
-  # Prompt for downloads directory (may differ from media dir on some setups)
-  prompt_input "Downloads directory" "${CFG_DATADIR}/downloads"
+  # Downloads directory (may differ from media dir on some setups)
+  ans_prompt_input "DOWNLOADSDIR" "Downloads directory" "${CFG_DATADIR}/downloads"
   CFG_DOWNLOADSDIR="$REPLY"
+  state_set ".install.downloadsdir = \"$CFG_DOWNLOADSDIR\""
 
   render_template "${SCRIPT_DIR}/templates/env.template" "$env_file" \
     "GENERATED_DATE=$(date '+%Y-%m-%d %H:%M:%S')" \
@@ -643,16 +1120,10 @@ networks:
     driver: bridge
   socket_proxy:
     name: socket_proxy
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.91.0/24
+    external: true
   t3_proxy:
     name: t3_proxy
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.90.0/24
+    external: true
 
 ########################### SECRETS
 secrets:
@@ -719,6 +1190,10 @@ _include_service_if_exists() {
 
   local src="${SCRIPT_DIR}/compose/${CFG_HOSTNAME}/${service}.yml"
   if [[ ! -f "$src" ]]; then
+    # Try the shared hs/ snippets directory
+    src="${SCRIPT_DIR}/compose/hs/${service}.yml"
+  fi
+  if [[ ! -f "$src" ]]; then
     # Try generic (non-hostname-specific)
     src="${SCRIPT_DIR}/compose/${service}.yml"
   fi
@@ -726,8 +1201,11 @@ _include_service_if_exists() {
   if [[ -f "$src" ]]; then
     echo "" >> "$compose_out"
     echo "  ########## ${service^^} ##########" >> "$compose_out"
-    # Append service block (skip the 'services:' header line if present)
-    grep -v "^services:" "$src" >> "$compose_out" 2>/dev/null || true
+    # Append service block — skip the 'services:' header and strip 'profiles:'
+    # lines (profiles are not needed since we selectively include snippets)
+    grep -v "^services:" "$src" \
+      | grep -v "^[[:space:]]*profiles:" \
+      >> "$compose_out" 2>/dev/null || true
   else
     log_sub "  No compose snippet for '$service' — skipping include"
   fi

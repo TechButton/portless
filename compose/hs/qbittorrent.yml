@@ -1,0 +1,35 @@
+services:
+  # qBittorrent - BitTorrent client
+  # https://github.com/qbittorrent/qBittorrent
+  # Default webUI login: admin / adminadmin (change immediately)
+  # For VPN-protected downloading use qbittorrent-vpn instead
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["downloads", "all"]
+    networks:
+      - t3_proxy
+    ports:
+      - "$QBITTORRENTVPN_PORT:8080"
+      - "6881:6881"
+      - "6881:6881/udp"
+    volumes:
+      - $DOCKERDIR/appdata/qbittorrent:/config
+      - $DOWNLOADSDIR:/data/downloads
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      WEBUI_PORT: 8080
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qbittorrent-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.qbittorrent-rtr.rule=Host(`torrents.$DOMAINNAME_1`)"
+      - "traefik.http.routers.qbittorrent-rtr.middlewares=chain-tinyauth@file"
+      - "traefik.http.routers.qbittorrent-rtr.service=qbittorrent-svc"
+      - "traefik.http.services.qbittorrent-svc.loadbalancer.server.port=8080"
+    # DOCKER-LABELS-PLACEHOLDER

@@ -1,0 +1,41 @@
+services:
+  # CrowdSec - Community-powered intrusion prevention for Traefik
+  # https://www.crowdsec.net/
+  # After deploy run: ./manage.sh security crowdsec-setup
+  crowdsec:
+    container_name: crowdsec
+    image: crowdsecurity/crowdsec:latest
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["security", "all"]
+    networks:
+      - default
+      - t3_proxy
+    environment:
+      - COLLECTIONS=crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/whitelist-good-actors crowdsecurity/linux
+      - GID=${PGID}
+      - CUSTOM_HOSTNAME=${HOSTNAME}
+    volumes:
+      - ${DOCKERDIR}/logs/${HOSTNAME}:/logs/${HOSTNAME}:ro
+      - /var/log:/var/log:ro
+      - ${DOCKERDIR}/appdata/crowdsec/data:/var/lib/crowdsec/data
+      - ${DOCKERDIR}/appdata/crowdsec/config:/etc/crowdsec
+
+  ########## CROWDSEC TRAEFIK BOUNCER ##########
+  traefik-bouncer:
+    container_name: traefik-bouncer
+    image: fbonalair/traefik-crowdsec-bouncer:latest
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["security", "all"]
+    networks:
+      - default
+      - t3_proxy
+    environment:
+      - GIN_MODE=release
+      - CROWDSEC_BOUNCER_API_KEY=${CROWDSEC_TRAEFIK_BOUNCER_API_KEY}
+      - CROWDSEC_AGENT_HOST=crowdsec:8080
+      - CROWDSEC_BOUNCER_LOG_LEVEL=2
+    # DOCKER-LABELS-PLACEHOLDER
