@@ -7,9 +7,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+PORTLESS_VERSION="$(cat "${SCRIPT_DIR}/VERSION" 2>/dev/null || echo "0.5.0")"
+
 # Load libraries
 source "${SCRIPT_DIR}/lib/common.sh"
-HOMELAB_COMMON_LOADED=1
+PORTLESS_COMMON_LOADED=1
 source "${SCRIPT_DIR}/lib/docker.sh"
 source "${SCRIPT_DIR}/lib/state.sh"
 source "${SCRIPT_DIR}/lib/traefik.sh"
@@ -24,9 +26,9 @@ source "${SCRIPT_DIR}/lib/netbird.sh"
 _load_state() {
   # Try to find state file
   local candidates=(
-    "${DOCKERDIR:-}/.homelab-state.json"
-    "$HOME/docker/.homelab-state.json"
-    "/opt/docker/.homelab-state.json"
+    "${DOCKERDIR:-}/.portless-state.json"
+    "$HOME/docker/.portless-state.json"
+    "/opt/docker/.portless-state.json"
   )
   for f in "${candidates[@]}"; do
     if [[ -n "$f" && -f "$f" ]]; then
@@ -34,7 +36,7 @@ _load_state() {
       return 0
     fi
   done
-  die "No .homelab-state.json found. Run ./install.sh first."
+  die "No .portless-state.json found. Run ./install.sh first."
 }
 
 _require_app_installed() {
@@ -290,15 +292,37 @@ cmd_pangolin() {
     setup)
       _cmd_pangolin_setup
       ;;
+    repair-db)
+      log_step "Repairing Pangolin Database"
+      local _repair_email
+      _repair_email=$(state_get '.tunnel.pangolin.admin_email' 2>/dev/null || true)
+      local _repair_vps_host
+      _repair_vps_host=$(state_get '.tunnel.pangolin.vps_host' 2>/dev/null || true)
+      [[ -n "$_repair_vps_host" ]] || die "Pangolin not configured. Run: ./manage.sh pangolin setup"
+      _pang_init_ssh_from_state
+      pangolin_repair_db "${_repair_email:-}"
+      ;;
+    diagnose)
+      log_step "Pangolin Diagnostics"
+      pangolin_diagnose
+      ;;
+    fix-404)
+      pangolin_fix_404 "${3:-}"
+      ;;
     status)
-      echo -e "\n${BOLD}Pangolin Status:${RESET}"
-      state_get '.pangolin'
+      echo -e "\n${BOLD}Pangolin Tunnel:${RESET}"
+      echo -e "  VPS:     $(state_get '.tunnel.pangolin.vps_host')"
+      echo -e "  Domain:  $(state_get '.tunnel.pangolin.domain')"
+      echo -e "  Org ID:  $(state_get '.tunnel.pangolin.org_id')"
+      echo -e "  Site ID: $(state_get '.tunnel.pangolin.site_id')"
       echo ""
       echo -e "${BOLD}Apps with Pangolin exposure:${RESET}"
-      state_get '.apps | to_entries[] | select(.value.pangolin_resource_id != null) | "\(.key) → resource \(.value.pangolin_resource_id) port \(.value.internal_port)"'
+      state_get '.apps | to_entries[] | select(.value.pangolin_resource_id != null) | "  \(.key) → resource \(.value.pangolin_resource_id) port \(.value.internal_port)"'
+      echo ""
+      pangolin_check_tunnel_health
       ;;
     *)
-      echo "Usage: manage.sh pangolin <setup|add|remove|status> [app]"
+      echo "Usage: manage.sh pangolin <setup|add|remove|status|repair-db> [app]"
       ;;
   esac
 }
@@ -538,6 +562,9 @@ EOF
           echo ""
           echo -e "${BOLD}Apps with Pangolin exposure:${RESET}"
           state_get '.apps | to_entries[] | select(.value.pangolin_resource_id != null) | "  \(.key) → resource \(.value.pangolin_resource_id) port \(.value.internal_port)"'
+          echo ""
+          log_sub "Checking tunnel connectivity..."
+          pangolin_check_tunnel_health
           ;;
         tailscale)
           tailscale_status
@@ -770,16 +797,10 @@ networks:
     driver: bridge
   socket_proxy:
     name: socket_proxy
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.91.0/24
+    external: true
   t3_proxy:
     name: t3_proxy
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 192.168.90.0/24
+    external: true
 
 secrets:
   basic_auth_credentials:
@@ -824,7 +845,7 @@ EOF
 cmd_help() {
   cat <<EOF
 
-${BOLD}portless — manage.sh${RESET}
+${BOLD}portless v${PORTLESS_VERSION} — manage.sh${RESET}
 
 ${BOLD}USAGE:${RESET}
   ./manage.sh <command> [args]
@@ -853,7 +874,11 @@ ${BOLD}COMMANDS:${RESET}
   ${CYAN}pangolin setup${RESET}              (Re)configure Pangolin tunnel
   ${CYAN}pangolin add <app>${RESET}          Expose a specific app via Pangolin
   ${CYAN}pangolin remove <app>${RESET}       Remove Pangolin exposure for an app
-  ${CYAN}pangolin status${RESET}             Show Pangolin config and exposed apps
+  ${CYAN}pangolin status${RESET}             Show Pangolin config, exposed apps, tunnel health
+  ${CYAN}pangolin repair-db${RESET}          Fix admin access grants + resource visibility
+  ${CYAN}pangolin diagnose${RESET}           Dump routing state (sites, resources, targets)
+  ${CYAN}pangolin fix-404${RESET}            Fix 404s: method, enableProxy, domain linking
+  ${CYAN}pangolin fix-404 --dry-run${RESET}  Preview fixes without applying
 
 ${BOLD}SUPPORTED APPS:${RESET}
 $(ls "${SCRIPT_DIR}/lib/apps/"*.sh 2>/dev/null | xargs -I{} basename {} .sh | sed 's/^/  /')
@@ -886,6 +911,7 @@ case "${1:-help}" in
   pangolin)    shift; cmd_pangolin "$@" ;;
   security)    shift; cmd_security "$@" ;;
   help|--help|-h) cmd_help ;;
+  version|--version|-V) echo "portless v${PORTLESS_VERSION}" ;;
   *)
     log_error "Unknown command: ${1:-}"
     cmd_help

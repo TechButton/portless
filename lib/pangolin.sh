@@ -4,14 +4,20 @@
 # Based on proven patterns from PANGOLIN_INFRASTRUCTURE.md and THEMEDIA_SETUP.md
 # Critical: method must be 'https' and tlsServerName must be set (avoids redirect loop)
 
-[[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-HOMELAB_PANGOLIN_LOADED=1
+[[ -n "$PORTLESS_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+PORTLESS_PANGOLIN_LOADED=1
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ADD_RESOURCE_SCRIPT="${REPO_ROOT}/templates/pangolin/add_resource.cjs"
+REPAIR_DB_SCRIPT="${REPO_ROOT}/templates/pangolin/repair_pangolin_db.cjs"
+DIAGNOSE_SCRIPT="${REPO_ROOT}/templates/pangolin/diagnose_pangolin.cjs"
+FIX_404_SCRIPT="${REPO_ROOT}/templates/pangolin/fix_404.cjs"
 VPS_INIT_SCRIPT="${REPO_ROOT}/templates/pangolin/vps-init.sh"
 PANGOLIN_COMPOSE_TMPL="${REPO_ROOT}/templates/pangolin/pangolin-compose.yml.tmpl"
 PANGOLIN_CONFIG_TMPL="${REPO_ROOT}/templates/pangolin/pangolin-config.yml.tmpl"
+PANGOLIN_TRAEFIK_TMPL="${REPO_ROOT}/templates/pangolin/traefik_config.yml.tmpl"
+PANGOLIN_DYNAMIC_TMPL="${REPO_ROOT}/templates/pangolin/dynamic_config.yml.tmpl"
+PANGOLIN_SETUP_SCRIPT="${REPO_ROOT}/templates/pangolin/setup_pangolin.cjs"
 
 # ─── SSH connection state ──────────────────────────────────────────────────────
 # Set by _pang_init_connection(); used by _pang_ssh() and _pang_scp_to()
@@ -25,6 +31,30 @@ _PANG_SSH_PORT="22"
 _PANG_SSH_BASE_OPTS=""
 
 # ─── Connection setup ──────────────────────────────────────────────────────────
+
+# _pang_init_ssh_from_state — initialise connection variables from .portless-state.json
+# No-op if already connected to the same host.
+_pang_init_ssh_from_state() {
+  local vps_host ssh_user ssh_auth ssh_key ssh_pass
+  vps_host=$(state_get '.tunnel.pangolin.vps_host')
+  ssh_user=$(state_get '.tunnel.pangolin.ssh_user')
+  ssh_auth=$(state_get '.tunnel.pangolin.ssh_auth')
+  ssh_key=$(state_get '.tunnel.pangolin.ssh_key')
+  ssh_pass=$(state_get '.tunnel.pangolin.ssh_pass')
+  ssh_user="${ssh_user:-root}"
+  ssh_auth="${ssh_auth:-key}"
+  ssh_key="${ssh_key:-$HOME/.ssh/id_rsa}"
+
+  [[ -n "$vps_host" ]] || die "Pangolin VPS host not in state"
+
+  if [[ -z "$_PANG_VPS_HOST" || "$_PANG_VPS_HOST" != "$vps_host" ]]; then
+    if [[ "$ssh_auth" == "password" ]]; then
+      _pang_init_connection "$vps_host" "$ssh_user" "password" "$ssh_pass"
+    else
+      _pang_init_connection "$vps_host" "$ssh_user" "key" "$ssh_key"
+    fi
+  fi
+}
 
 # _pang_init_connection — call once to configure the SSH session variables
 # Usage: _pang_init_connection <host> <user> <auth> <key_or_pass> [port]
@@ -145,11 +175,11 @@ pangolin_install_vps() {
   log_sub "Running VPS initialization (hardening + Docker)..."
   log_sub "  This will take 2-5 minutes. Progress logged to ${LOG_FILE:-/tmp/portless-install.log}"
 
-  _pang_scp_to "$VPS_INIT_SCRIPT" "/tmp/homelab-vps-init.sh" \
+  _pang_scp_to "$VPS_INIT_SCRIPT" "/tmp/portless-vps-init.sh" \
     >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1 || die "Could not copy init script to VPS"
 
   local init_output
-  init_output=$(_pang_ssh "chmod +x /tmp/homelab-vps-init.sh && sudo bash /tmp/homelab-vps-init.sh" 2>&1) \
+  init_output=$(_pang_ssh "chmod +x /tmp/portless-vps-init.sh && sudo bash /tmp/portless-vps-init.sh" 2>&1) \
     || { echo "$init_output" >> ${LOG_FILE:-/tmp/portless-install.log}; die "VPS init script failed — see ${LOG_FILE:-/tmp/portless-install.log}"; }
 
   echo "$init_output" >> ${LOG_FILE:-/tmp/portless-install.log}
@@ -167,64 +197,134 @@ pangolin_install_vps() {
   local base_domain
   base_domain=$(echo "$pangolin_domain" | cut -d. -f2-)
 
+  # Generate a random secret for this Pangolin instance (min 32 chars, required)
+  # Use openssl only — tr+head triggers pipefail (tr gets SIGPIPE when head closes the pipe)
+  local pangolin_secret
+  pangolin_secret=$(openssl rand -hex 32)
+
   # Render templates locally
   local tmp_compose; tmp_compose=$(mktemp /tmp/pangolin-compose.XXXXXX.yml)
   local tmp_config;  tmp_config=$(mktemp /tmp/pangolin-config.XXXXXX.yml)
+  local tmp_traefik; tmp_traefik=$(mktemp /tmp/pangolin-traefik.XXXXXX.yml)
+  local tmp_dynamic; tmp_dynamic=$(mktemp /tmp/pangolin-dynamic.XXXXXX.yml)
 
   render_template "$PANGOLIN_COMPOSE_TMPL" "$tmp_compose" \
-    "PANGOLIN_DOMAIN=${pangolin_domain}" \
-    "BASE_DOMAIN=${base_domain}" \
-    "ACME_EMAIL=${acme_email}"
+    "PANGOLIN_DOMAIN=${pangolin_domain}"
 
   render_template "$PANGOLIN_CONFIG_TMPL" "$tmp_config" \
     "PANGOLIN_DOMAIN=${pangolin_domain}" \
     "BASE_DOMAIN=${base_domain}" \
+    "ACME_EMAIL=${acme_email}" \
+    "SECRET=${pangolin_secret}"
+
+  render_template "$PANGOLIN_TRAEFIK_TMPL" "$tmp_traefik" \
     "ACME_EMAIL=${acme_email}"
 
-  # Upload to VPS
-  _pang_ssh "mkdir -p /opt/pangolin/config /opt/pangolin/config/letsencrypt" \
-    >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1
+  render_template "$PANGOLIN_DYNAMIC_TMPL" "$tmp_dynamic" \
+    "PANGOLIN_DOMAIN=${pangolin_domain}"
+
+  # Upload to VPS — use sudo for /opt, then chown so the SSH user can write directly
+  _pang_ssh "sudo mkdir -p /opt/pangolin/config/letsencrypt /opt/pangolin/config/traefik/logs && sudo chown -R \$(id -u):\$(id -g) /opt/pangolin" \
+    >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1 \
+    || die "Could not create /opt/pangolin on VPS (sudo required)"
 
   _pang_scp_to "$tmp_compose" "/opt/pangolin/docker-compose.yml" \
     >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1 || die "Could not upload Pangolin compose file"
 
-  _pang_scp_to "$tmp_config" "/opt/pangolin/config/pangolin.config.yml" \
+  _pang_scp_to "$tmp_config" "/opt/pangolin/config/config.yml" \
     >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1 || die "Could not upload Pangolin config file"
+
+  _pang_scp_to "$tmp_traefik" "/opt/pangolin/config/traefik/traefik_config.yml" \
+    >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1 || die "Could not upload Traefik config file"
+
+  _pang_scp_to "$tmp_dynamic" "/opt/pangolin/config/traefik/dynamic_config.yml" \
+    >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1 || die "Could not upload Traefik dynamic config file"
 
   # Set correct permissions on acme.json (Traefik requirement)
   _pang_ssh "touch /opt/pangolin/config/letsencrypt/acme.json && chmod 600 /opt/pangolin/config/letsencrypt/acme.json" \
     >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1
 
-  rm -f "$tmp_compose" "$tmp_config"
+  rm -f "$tmp_compose" "$tmp_config" "$tmp_traefik" "$tmp_dynamic"
 
-  # Start the stack
+  # Start the stack — use sudo for docker in case the user's group membership hasn't refreshed
   log_sub "Starting Pangolin stack (docker compose up -d)..."
-  _pang_ssh "cd /opt/pangolin && docker compose pull -q 2>/dev/null; docker compose up -d" \
+  _pang_ssh "cd /opt/pangolin && sudo docker compose pull -q 2>/dev/null; sudo docker compose up -d" \
     >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1 \
     || die "Failed to start Pangolin stack — check ${LOG_FILE:-/tmp/portless-install.log}"
   log_ok "Pangolin stack started"
 
   # ── 4. Wait for Pangolin API ──────────────────────────────────────────────────
-  log_sub "Waiting for Pangolin API to be ready (up to 90s)..."
-  local attempts=0
-  local ready=false
-  while (( attempts < 18 )); do
-    local ping_result
-    ping_result=$(_pang_ssh "curl -sf --max-time 5 http://localhost:3001/api/v1/ping 2>/dev/null || echo FAIL")
-    if [[ "$ping_result" != "FAIL" && -n "$ping_result" ]]; then
+  log_sub "Waiting for Pangolin API to be ready (up to 120s)..."
+
+  # Use a SSH ControlMaster socket so all polls share one connection.
+  # If the socket drops we detect it and re-open before the next poll.
+  local ctrl_sock elapsed ready ping_result
+  ctrl_sock=$(mktemp -u "/tmp/portless-ctrl-XXXXXX")
+  elapsed=0
+  ready=false
+
+  # Open the persistent master connection
+  # shellcheck disable=SC2086
+  _pang_ctrl_open() {
+    ssh $_PANG_SSH_BASE_OPTS \
+        -o ControlMaster=yes -o ControlPath="$ctrl_sock" -o ControlPersist=150s \
+        "${_PANG_SSH_USER}@${_PANG_VPS_HOST}" "true" &>/dev/null || true
+  }
+  _pang_ctrl_open
+
+  while [[ $elapsed -lt 120 ]]; do
+    printf "  [%3ds] checking Pangolin API...\r" "$elapsed" >&2
+
+    # Re-open master if it went away (VPS reboot, network blip, etc.)
+    if ! ssh -O check -S "$ctrl_sock" "${_PANG_SSH_USER}@${_PANG_VPS_HOST}" &>/dev/null; then
+      printf "  [%3ds] SSH disconnected — reconnecting...\r" "$elapsed" >&2
+      _pang_ctrl_open
+    fi
+
+    # Poll the API through the multiplexed socket
+    ping_result=$(ssh -S "$ctrl_sock" \
+        "${_PANG_SSH_USER}@${_PANG_VPS_HOST}" \
+        "curl -sf --max-time 5 http://localhost:3001/api/v1/ 2>/dev/null || echo FAIL") || true
+
+    if [[ -n "$ping_result" && "$ping_result" != "FAIL" ]]; then
       ready=true
       break
     fi
+
+    # Every 30s print live container status so the user can see what's happening
+    if (( elapsed > 0 && elapsed % 30 == 0 )); then
+      printf "\r\033[K" >&2
+      log_sub "Still waiting (${elapsed}s) — container status:"
+      ssh -S "$ctrl_sock" "${_PANG_SSH_USER}@${_PANG_VPS_HOST}" \
+          "cd /opt/pangolin && sudo docker compose ps 2>/dev/null" \
+          2>/dev/null | while IFS= read -r line; do
+            echo -e "  ${DIM}${line}${RESET}"
+          done || true
+    fi
+
     sleep 5
-    (( attempts++ ))
+    elapsed=$(( elapsed + 5 ))
   done
 
+  # Tear down the control socket cleanly
+  ssh -O exit -S "$ctrl_sock" "${_PANG_SSH_USER}@${_PANG_VPS_HOST}" &>/dev/null || true
+  rm -f "$ctrl_sock"
+  printf "\r\033[K" >&2
+
   if [[ "$ready" == "true" ]]; then
-    log_ok "Pangolin API is ready"
+    log_ok "Pangolin API is ready (${elapsed}s)"
   else
-    log_warn "Pangolin API not responding yet — it may still be initializing."
-    log_warn "Check VPS: ssh ${ssh_user}@${vps_ip} 'cd /opt/pangolin && docker compose logs'"
-    log_warn "Continuing setup — API calls will retry..."
+    log_warn "Pangolin API not responding after ${elapsed}s — container logs:"
+    local container_logs
+    container_logs=$(_pang_ssh \
+        "cd /opt/pangolin && sudo docker compose logs --tail=30 pangolin 2>/dev/null") || true
+    if [[ -n "$container_logs" ]]; then
+      echo "$container_logs" | while IFS= read -r line; do
+        echo -e "  ${DIM}${line}${RESET}"
+      done
+    fi
+    log_warn "Continuing — setup will attempt API calls. To check the VPS manually:"
+    log_warn "  ssh ${_PANG_SSH_USER:-root}@${vps_ip} 'cd /opt/pangolin && sudo docker compose ps'"
   fi
 
   PANGOLIN_VPS_HOST="$vps_ip"
@@ -239,6 +339,14 @@ pangolin_install_vps() {
 #
 # Sets: PANGOLIN_ORG_ID, PANGOLIN_SITE_ID, NEWT_ID, NEWT_SECRET
 #
+# Implementation notes (see docs/pangolin-api-database.md for full reference):
+#   - Admin creation uses the one-time setup token via the external API (port 3000)
+#   - Org + site creation also go through the external API, running inside the container
+#     via docker exec (avoids CSRF and network port issues — port 3000 is only reachable
+#     from inside the Docker network, not from the VPS host)
+#   - We pre-generate newtId and newtSecret; Pangolin hashes the secret with Argon2
+#   - Falls back to manual credential entry if any API call fails
+#
 pangolin_setup_admin_and_site() {
   local admin_email="$1"
   local admin_password="$2"
@@ -247,155 +355,194 @@ pangolin_setup_admin_and_site() {
 
   log_step "Configuring Pangolin: admin user, organization, and site"
 
-  # Run all API calls in a single SSH session to preserve the cookie jar
+  # ── Derive org_id (URL-safe slug) ─────────────────────────────────────────────
+  # Pattern required by Pangolin: ^[a-z0-9_]+(-[a-z0-9_]+)*$
+  local org_id
+  org_id=$(printf '%s' "$org_name" \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed 's/[^a-z0-9]/-/g' \
+    | sed 's/--*/-/g' \
+    | sed 's/^-\|-$//g' \
+    | cut -c1-32)
+  [[ -n "$org_id" ]] || org_id="portless"
+
+  # ── Generate Newt credentials ──────────────────────────────────────────────────
+  # We supply these when creating the site.  Pangolin hashes the secret server-side
+  # (Argon2 via oslo@1.2.1) and stores the hash in the 'newt' table.
+  # We keep the plaintext secret for the Newt client config.
+  # Use openssl only — tr+head triggers pipefail (tr gets SIGPIPE when head closes the pipe)
+  local newt_id newt_secret
+  newt_id=$(openssl rand -hex 8)     # 16 lowercase hex chars
+  newt_secret=$(openssl rand -hex 32) # 64 lowercase hex chars
+
+  # ── Get the one-time setup token from container logs ──────────────────────────
+  # Pangolin logs: "=== SETUP TOKEN [GENERATED] ===" then "Token: <32-char-alphanum>"
+  log_sub "Getting Pangolin setup token from container logs..."
+  local setup_token="" attempts=0
+  while [[ -z "$setup_token" && $attempts -lt 10 ]]; do
+    setup_token=$(_pang_ssh \
+      "sudo docker logs pangolin 2>&1 | grep -i 'Token:' | tail -1 | sed 's/.*[Tt]oken:[[:space:]]*//' | awk '{print \$1}'" \
+      2>/dev/null || true)
+    setup_token="${setup_token//[[:space:]]/}"
+    if [[ -z "$setup_token" ]]; then
+      sleep 3
+      (( attempts++ )) || true
+    fi
+  done
+
+  if [[ -z "$setup_token" ]]; then
+    log_warn "Could not auto-extract setup token from Pangolin logs"
+    log_sub "To find it manually: ssh ${_PANG_SSH_USER}@${_PANG_VPS_HOST} 'sudo docker logs pangolin 2>&1 | grep -i Token'"
+    prompt_input "Enter the Pangolin setup token" ""
+    setup_token="$REPLY"
+    [[ -n "$setup_token" ]] || die "Setup token is required to configure Pangolin"
+  fi
+
+  # ── Wait for Pangolin DB schema to be ready ───────────────────────────────────
+  # Pangolin creates its SQLite tables on first startup. The health check passes
+  # before migrations finish, so we poll until the 'users' table exists.
+  # Wait for the CURRENT run's setup token to appear in logs.
+  # Docker logs persist across restarts, so we grep for the specific token we extracted —
+  # it only appears after migrations complete for THIS container run.
+  log_sub "Waiting for Pangolin to finish initializing (migrations + token)..."
+  local db_ready=0
+  for _attempt in $(seq 1 30); do
+    if _pang_ssh \
+        "sudo docker logs pangolin 2>&1 | grep -qF '${setup_token}'" \
+        2>/dev/null; then
+      db_ready=1
+      break
+    fi
+    sleep 3
+  done
+  if [[ "$db_ready" -eq 0 ]]; then
+    die "Pangolin did not finish initializing after 90s. Check: sudo docker logs pangolin"
+  fi
+  log_ok "Pangolin database ready"
+
+  # ── Build config JSON for the setup script ────────────────────────────────────
+  # jq handles escaping of all values (passwords, names with special characters, etc.)
+  log_sub "Running automated Pangolin setup (admin → org '${org_id}' → site)..."
+  local tmp_cfg
+  tmp_cfg=$(mktemp /tmp/pangolin-cfg-XXXXXX.json)
+
+  jq -n \
+    --arg email      "$admin_email" \
+    --arg password   "$admin_password" \
+    --arg setupToken "$setup_token" \
+    --arg orgId      "$org_id" \
+    --arg orgName    "$org_name" \
+    --arg siteName   "$site_name" \
+    --arg newtId     "$newt_id" \
+    --arg newtSecret "$newt_secret" \
+    '{email:$email, password:$password, setupToken:$setupToken,
+      orgId:$orgId, orgName:$orgName, siteName:$siteName,
+      newtId:$newtId, newtSecret:$newtSecret}' > "$tmp_cfg"
+
+  # ── Upload config JSON and setup script to VPS, copy into container ───────────
+  _pang_scp_to "$tmp_cfg" "/tmp/pangolin-cfg.json" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 \
+    || { rm -f "$tmp_cfg"; die "Could not upload setup config to VPS"; }
+  rm -f "$tmp_cfg"
+
+  _pang_scp_to "$PANGOLIN_SETUP_SCRIPT" "/tmp/pangolin-setup.cjs" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 \
+    || die "Could not upload Pangolin setup script to VPS"
+
+  # Copy into /app inside the container (not /tmp) so Node can resolve
+  # require('better-sqlite3') and import('oslo/password') from /app/node_modules
+  _pang_ssh \
+    "sudo docker cp /tmp/pangolin-cfg.json pangolin:/tmp/pangolin-cfg.json && \
+     sudo docker cp /tmp/pangolin-setup.cjs pangolin:/app/pangolin-setup.cjs && \
+     rm -f /tmp/pangolin-cfg.json /tmp/pangolin-setup.cjs" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 \
+    || die "Could not copy setup files into Pangolin container"
+
   local api_result
-  api_result=$(_pang_ssh "bash -s" << REMOTE_API_SCRIPT
-set -euo pipefail
+  api_result=$(_pang_ssh \
+    "sudo docker exec pangolin node /app/pangolin-setup.cjs /tmp/pangolin-cfg.json 2>&1" \
+    2>/dev/null) || true
 
-API="http://localhost:3001"
-COOKIES="/tmp/pangolin-cookies-\$\$.txt"
-LOG="/tmp/pangolin-api-\$\$.log"
-touch "\$COOKIES"
+  echo "$api_result" >> "${LOG_FILE:-/tmp/portless-install.log}"
 
-# Helper: curl with cookie jar
-api_call() {
-  local method="\$1"; shift
-  local endpoint="\$1"; shift
-  curl -sf -b "\$COOKIES" -c "\$COOKIES" \
-    -X "\$method" "\${API}\${endpoint}" \
-    -H "Content-Type: application/json" \
-    "\$@" 2>> "\$LOG"
-}
+  # Clean up
+  _pang_ssh \
+    "sudo docker exec pangolin rm -f /app/pangolin-setup.cjs /tmp/pangolin-cfg.json 2>/dev/null; true" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 || true
 
-echo "=== Step 1: Create initial admin user ===" | tee -a "\$LOG"
-SIGNUP=\$(api_call POST /api/v1/auth/signup -d "{\"email\": \"${admin_email}\", \"password\": \"${admin_password}\"}" 2>&1 || true)
-echo "Signup response: \$SIGNUP" | tee -a "\$LOG"
+  # ── Parse result ──────────────────────────────────────────────────────────────
+  if echo "$api_result" | grep -q "SETUP_RESULT"; then
+    local result_line
+    result_line=$(echo "$api_result" | grep "SETUP_RESULT")
+    PANGOLIN_ORG_ID=$(echo "$result_line"  | grep -o 'org_id=[^ ]*'    | cut -d= -f2)
+    PANGOLIN_SITE_ID=$(echo "$result_line" | grep -o 'site_id=[^ ]*'   | cut -d= -f2)
+    PANGOLIN_ROLE_ID=$(echo "$result_line" | grep -o 'role_id=[^ ]*'   | cut -d= -f2)
+    NEWT_ID=$(echo "$result_line"          | grep -o 'newt_id=[^ ]*'   | cut -d= -f2)
+    NEWT_SECRET=$(echo "$result_line"      | grep -o 'newt_secret=[^ ]*' | cut -d= -f2)
+    log_ok "Pangolin configured: org=${PANGOLIN_ORG_ID} site=${PANGOLIN_SITE_ID} role=${PANGOLIN_ROLE_ID:-?}"
 
-# Check if signup succeeded or if user already exists (both are OK)
-if echo "\$SIGNUP" | grep -qi '"error"'; then
-  if echo "\$SIGNUP" | grep -qi 'already exists\|duplicate\|conflict'; then
-    echo "Admin user already exists — proceeding to login"
+    # Run the repair script immediately after setup to ensure all access tables are correct
+    log_sub "Verifying database access grants..."
+    pangolin_repair_db "${admin_email}" || true
   else
-    echo "SIGNUP_FAILED: \$SIGNUP" | tee -a "\$LOG"
-    # Don't fail here — might need login instead
-  fi
-fi
-
-echo "=== Step 2: Login ===" | tee -a "\$LOG"
-LOGIN=\$(api_call POST /api/v1/auth/login -d "{\"email\": \"${admin_email}\", \"password\": \"${admin_password}\"}" 2>&1)
-echo "Login response: \$LOGIN" | tee -a "\$LOG"
-
-if ! echo "\$LOGIN" | grep -qi '"token"\|"userId"\|success\|"user"'; then
-  echo "LOGIN_FAILED: \$LOGIN" | tee -a "\$LOG"
-  cat "\$LOG"
-  exit 1
-fi
-
-# Extract bearer token if present (some Pangolin versions use token-based auth)
-TOKEN=\$(echo "\$LOGIN" | grep -o '"token":"[^"]*"' | cut -d'"' -f4 || true)
-
-echo "=== Step 3: Create organization ===" | tee -a "\$LOG"
-if [[ -n "\$TOKEN" ]]; then
-  ORG_RESP=\$(curl -sf -b "\$COOKIES" -c "\$COOKIES" \
-    -X POST "\${API}/api/v1/org" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer \$TOKEN" \
-    -d "{\"name\": \"${org_name}\"}" 2>> "\$LOG")
-else
-  ORG_RESP=\$(api_call POST /api/v1/org -d "{\"name\": \"${org_name}\"}")
-fi
-echo "Org response: \$ORG_RESP" | tee -a "\$LOG"
-
-# Extract org ID from various possible response shapes
-ORG_ID=\$(echo "\$ORG_RESP" | grep -o '"orgId":"[^"]*"' | cut -d'"' -f4 || true)
-[[ -z "\$ORG_ID" ]] && ORG_ID=\$(echo "\$ORG_RESP" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4 || true)
-[[ -z "\$ORG_ID" ]] && ORG_ID=\$(echo "\$ORG_RESP" | grep -o '"org":{[^}]*"orgId":"[^"]*"' | grep -o '"orgId":"[^"]*"' | cut -d'"' -f4 || true)
-
-if [[ -z "\$ORG_ID" ]]; then
-  echo "ORG_CREATE_FAILED: \$ORG_RESP" | tee -a "\$LOG"
-  cat "\$LOG"
-  exit 2
-fi
-
-echo "Organization ID: \$ORG_ID" | tee -a "\$LOG"
-
-echo "=== Step 4: Create site ===" | tee -a "\$LOG"
-if [[ -n "\$TOKEN" ]]; then
-  SITE_RESP=\$(curl -sf -b "\$COOKIES" -c "\$COOKIES" \
-    -X POST "\${API}/api/v1/org/\${ORG_ID}/site" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer \$TOKEN" \
-    -d "{\"name\": \"${site_name}\", \"type\": \"newt\"}" 2>> "\$LOG")
-else
-  SITE_RESP=\$(api_call POST "/api/v1/org/\${ORG_ID}/site" -d "{\"name\": \"${site_name}\", \"type\": \"newt\"}")
-fi
-echo "Site response: \$SITE_RESP" | tee -a "\$LOG"
-
-# Parse site response
-SITE_ID=\$(echo "\$SITE_RESP" | grep -o '"siteId":[0-9]*' | cut -d: -f2 || true)
-NEWT_ID=\$(echo "\$SITE_RESP" | grep -o '"newtId":"[^"]*"' | cut -d'"' -f4 || true)
-NEWT_SECRET=\$(echo "\$SITE_RESP" | grep -o '"newtSecret":"[^"]*"' | cut -d'"' -f4 || true)
-
-if [[ -z "\$SITE_ID" || -z "\$NEWT_ID" || -z "\$NEWT_SECRET" ]]; then
-  echo "SITE_CREATE_FAILED: \$SITE_RESP" | tee -a "\$LOG"
-  cat "\$LOG"
-  exit 3
-fi
-
-# Output structured result for parsing on local machine
-echo "PANGOLIN_RESULT_START"
-echo "ORG_ID=\${ORG_ID}"
-echo "SITE_ID=\${SITE_ID}"
-echo "NEWT_ID=\${NEWT_ID}"
-echo "NEWT_SECRET=\${NEWT_SECRET}"
-echo "PANGOLIN_RESULT_END"
-
-rm -f "\$COOKIES" "\$LOG"
-REMOTE_API_SCRIPT
-  ) 2>&1
-
-  # Parse output
-  local result_block
-  result_block=$(echo "$api_result" | sed -n '/PANGOLIN_RESULT_START/,/PANGOLIN_RESULT_END/p' | grep -v "PANGOLIN_RESULT")
-
-  if [[ -z "$result_block" ]]; then
-    log_error "Pangolin API setup failed. Output:"
-    echo "$api_result" >&2
-    echo "$api_result" >> ${LOG_FILE:-/tmp/portless-install.log}
-    log_warn ""
-    log_warn "You can complete setup manually via the Pangolin dashboard:"
-    log_warn "  https://${PANGOLIN_DOMAIN}"
-    log_warn ""
+    log_warn "Automated Pangolin DB setup failed. Error output:"
+    echo "$api_result" | head -20 | while IFS= read -r line; do
+      [[ -n "$line" ]] && echo -e "  ${DIM}${line}${RESET}"
+    done
+    echo ""
+    log_warn "Manual setup required. Complete these steps in your browser:"
+    echo ""
+    echo -e "  ${BOLD}1. Open:${RESET} ${CYAN}https://${PANGOLIN_DOMAIN}/auth/initial-setup${RESET}"
+    echo ""
+    if [[ -n "${setup_token:-}" ]]; then
+      echo -e "  ${BOLD}2. Setup token:${RESET} ${CYAN}${setup_token}${RESET}"
+    else
+      echo -e "  ${BOLD}2. Get setup token:${RESET}"
+      echo -e "     ${DIM}ssh ${_PANG_SSH_USER}@${_PANG_VPS_HOST} 'sudo docker logs pangolin 2>&1 | grep -i Token'${RESET}"
+    fi
+    echo ""
+    echo -e "  ${BOLD}3.${RESET} Create admin account  →  email: ${CYAN}${admin_email}${RESET}"
+    echo -e "  ${BOLD}4.${RESET} Create organization   →  name:  ${CYAN}${org_name}${RESET}   id: ${CYAN}${org_id}${RESET}"
+    echo -e "  ${BOLD}5.${RESET} Create site           →  type: Newt,  name: ${CYAN}${site_name}${RESET}"
+    echo -e "  ${BOLD}6.${RESET} Copy the Newt credentials shown after site creation"
+    echo ""
     _pang_prompt_manual_credentials
-    return 0
   fi
-
-  PANGOLIN_ORG_ID=$(echo "$result_block" | grep "^ORG_ID=" | cut -d= -f2)
-  PANGOLIN_SITE_ID=$(echo "$result_block" | grep "^SITE_ID=" | cut -d= -f2)
-  NEWT_ID=$(echo "$result_block" | grep "^NEWT_ID=" | cut -d= -f2)
-  NEWT_SECRET=$(echo "$result_block" | grep "^NEWT_SECRET=" | cut -d= -f2)
-
-  log_ok "Pangolin organization created: $PANGOLIN_ORG_ID"
-  log_ok "Pangolin site created: ID $PANGOLIN_SITE_ID"
-  log_ok "Newt credentials obtained"
 }
 
 # ─── Manual credential fallback ────────────────────────────────────────────────
 
 _pang_prompt_manual_credentials() {
-  log_warn "Switching to manual credential entry..."
   echo ""
-  echo -e "  ${BOLD}Please open the Pangolin dashboard and:${RESET}"
-  echo -e "  1. Create an organization"
-  echo -e "  2. Create a site (type: Newt/WireGuard)"
-  echo -e "  3. Copy the Newt credentials shown"
-  echo ""
-
   prompt_input "Pangolin organization ID" ""
   PANGOLIN_ORG_ID="$REPLY"
 
-  prompt_input "Pangolin site ID (number)" ""
-  PANGOLIN_SITE_ID="$REPLY"
+  # Auto-detect site ID from the DB — users can't see the integer siteId in the Pangolin web UI
+  log_sub "Looking up site ID from Pangolin database..."
+  local db_sites site_count
+  db_sites=$(_pang_ssh \
+    "sudo docker exec pangolin node -e \
+     'const db=require(\"/app/node_modules/better-sqlite3\")(\"/app/config/db/db.sqlite\");\
+      console.log(JSON.stringify(db.prepare(\"SELECT siteId,name FROM sites WHERE orgId=?\").all(\"${PANGOLIN_ORG_ID}\")));'" \
+    2>/dev/null || echo "[]")
+  site_count=$(echo "$db_sites" | jq 'length' 2>/dev/null || echo "0")
+
+  if [[ "$site_count" -eq 1 ]]; then
+    PANGOLIN_SITE_ID=$(echo "$db_sites" | jq -r '.[0].siteId')
+    local found_name
+    found_name=$(echo "$db_sites" | jq -r '.[0].name')
+    log_ok "Found site '${found_name}' → site ID: ${PANGOLIN_SITE_ID}"
+  elif [[ "$site_count" -gt 1 ]]; then
+    echo "  Found multiple sites in org '${PANGOLIN_ORG_ID}':"
+    echo "$db_sites" | jq -r '.[] | "  [\(.siteId)] \(.name)"'
+    prompt_input "Enter the site ID (number) for this installation" ""
+    PANGOLIN_SITE_ID="$REPLY"
+  else
+    log_warn "Could not auto-detect site ID from database. Enter it manually."
+    log_sub "Run this to find it: ssh ${_PANG_SSH_USER}@${_PANG_VPS_HOST} \"sudo docker exec pangolin node -e 'const db=require(\\\"/app/node_modules/better-sqlite3\\\")(\\\"/app/config/db/db.sqlite\\\"); console.log(JSON.stringify(db.prepare(\\\"SELECT siteId,name FROM sites\\\").all()));'\""
+    prompt_input "Pangolin site ID (integer)" ""
+    PANGOLIN_SITE_ID="$REPLY"
+  fi
 
   prompt_input "Newt client ID" ""
   NEWT_ID="$REPLY"
@@ -467,7 +614,7 @@ pangolin_copy_ssh_key() {
     log_warn "SSH public key not found: $pub_key_path"
     if prompt_yn "Generate a new SSH key pair now?" "Y"; then
       local key_path="${pub_key_path%.pub}"
-      ssh-keygen -t ed25519 -f "$key_path" -N "" -C "homelab-$(hostname)" \
+      ssh-keygen -t ed25519 -f "$key_path" -N "" -C "portless-$(hostname)" \
         >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1
       pub_key_path="${key_path}.pub"
       log_ok "SSH key pair created: $key_path"
@@ -567,7 +714,7 @@ pangolin_register_resource() {
     fi
   fi
 
-  log_sub "Registering Pangolin resource: $app_name → $fqdn (tunnel port $internal_port)"
+  log_sub "Registering Pangolin resource: $app_name → $fqdn (tunnel port $internal_port)" >&2
 
   # Copy the script to the VPS, run it inside the pangolin container
   _pang_scp_to "$ADD_RESOURCE_SCRIPT" "/tmp/add_resource.cjs" \
@@ -576,22 +723,24 @@ pangolin_register_resource() {
 
   local resource_id
   resource_id=$(_pang_ssh \
-    "docker cp /tmp/add_resource.cjs pangolin:/tmp/add_resource.cjs && \
-     docker exec pangolin node /tmp/add_resource.cjs \
+    "sudo docker cp /tmp/add_resource.cjs pangolin:/app/add_resource.cjs && \
+     sudo docker exec pangolin node /app/add_resource.cjs \
        --site-id '${site_id}' \
        --name '${app_name}' \
        --subdomain '${fqdn}' \
        --http-port '${internal_port}' \
        --target-port '${service_port}' \
-       --target-host '${server_ip}'" 2>/tmp/homelab-pangolin-err.log)
+       --target-host '${server_ip}' && \
+     sudo docker exec pangolin rm -f /app/add_resource.cjs && \
+     rm -f /tmp/add_resource.cjs" 2>/tmp/portless-pangolin-err.log)
 
   if [[ -z "$resource_id" || ! "$resource_id" =~ ^[0-9]+$ ]]; then
-    log_error "Pangolin resource registration failed"
-    log_error "stderr: $(cat /tmp/homelab-pangolin-err.log 2>/dev/null)"
+    log_error "Pangolin resource registration failed" >&2
+    log_error "stderr: $(cat /tmp/portless-pangolin-err.log 2>/dev/null)" >&2
     return 1
   fi
 
-  log_ok "Pangolin resource registered: $app_name (ID: $resource_id, tunnel port: $internal_port)"
+  log_ok "Pangolin resource registered: $app_name (ID: $resource_id, tunnel port: $internal_port)" >&2
   echo "$resource_id"
 }
 
@@ -623,13 +772,13 @@ pangolin_remove_resource() {
 
   log_sub "Removing Pangolin resource ID: $resource_id"
 
-  _pang_ssh "docker exec pangolin node -e \"
-    const Database = require('better-sqlite3');
-    const db = new Database('/app/config/db.sqlite3');
+  _pang_ssh "sudo docker exec pangolin node -e \"
+    const Database = require('/app/node_modules/better-sqlite3');
+    const db = new Database('/app/config/db/db.sqlite');
     const result = db.prepare('DELETE FROM resources WHERE rowid = ?').run(${resource_id});
     console.log(result.changes > 0 ? 'deleted' : 'not_found');
     db.close();
-  \"" 2>/tmp/homelab-pangolin-err.log
+  \"" 2>/tmp/portless-pangolin-err.log
 
   log_ok "Pangolin resource $resource_id removed"
 }
@@ -656,7 +805,7 @@ pangolin_restart() {
   fi
 
   log_sub "Restarting Pangolin on VPS..."
-  _pang_ssh "cd /opt/pangolin && docker compose restart pangolin" \
+  _pang_ssh "cd /opt/pangolin && sudo docker compose restart pangolin" \
     >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1 && log_ok "Pangolin restarted"
 }
 
@@ -743,6 +892,58 @@ pangolin_wizard_fresh() {
   fi
   log_ok "SSH connection successful"
 
+  # ── Non-root user recommendation ────────────────────────────────────────────
+  if [[ "$ssh_user" == "root" ]]; then
+    echo ""
+    log_warn "You are connected as root. Running services as root is a security risk."
+    log_info "Best practice: create a dedicated sudo user for all operations."
+    if prompt_yn "Create a non-root sudo user on the VPS now?" "Y"; then
+      prompt_input "New username" "deploy"
+      local new_vps_user="$REPLY"
+      new_vps_user="${new_vps_user//[^a-z0-9_-]/}"   # sanitize
+      [[ -n "$new_vps_user" ]] || new_vps_user="deploy"
+
+      log_sub "Creating user '${new_vps_user}' on VPS..."
+      _pang_ssh "bash -s" << USERADD_SCRIPT
+set -e
+# Create user if not already there
+if ! id '${new_vps_user}' &>/dev/null; then
+  useradd -m -s /bin/bash '${new_vps_user}'
+fi
+# Add to sudo group
+usermod -aG sudo '${new_vps_user}'
+# Grant passwordless sudo (needed for Docker management + installer)
+echo '${new_vps_user} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-portless-${new_vps_user}
+chmod 440 /etc/sudoers.d/90-portless-${new_vps_user}
+# Copy root's authorized_keys so the same SSH key works for this user
+mkdir -p /home/${new_vps_user}/.ssh
+cp /root/.ssh/authorized_keys /home/${new_vps_user}/.ssh/authorized_keys 2>/dev/null || true
+chmod 700 /home/${new_vps_user}/.ssh
+chmod 600 /home/${new_vps_user}/.ssh/authorized_keys
+chown -R ${new_vps_user}:${new_vps_user} /home/${new_vps_user}/.ssh
+echo "USER_CREATED"
+USERADD_SCRIPT
+
+      # Test that the new user can SSH in
+      log_sub "Testing SSH as '${new_vps_user}'..."
+      local old_user="$ssh_user"
+      _pang_init_connection "$vps_ip" "$new_vps_user" "$ssh_auth" "$key_or_pass" "$ssh_port"
+      if _pang_test_connection; then
+        log_ok "SSH as '${new_vps_user}' confirmed — switching to new user"
+        ssh_user="$new_vps_user"
+        log_sub "Disabling root SSH login for security..."
+        _pang_ssh "sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && systemctl reload sshd && echo OK" \
+          >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 || \
+          log_warn "Could not disable root login — do it manually: PermitRootLogin no in /etc/ssh/sshd_config"
+        log_ok "Root SSH login disabled"
+      else
+        log_warn "Could not SSH as '${new_vps_user}' — falling back to root for this install"
+        _pang_init_connection "$vps_ip" "$old_user" "$ssh_auth" "$key_or_pass" "$ssh_port"
+      fi
+    fi
+    echo ""
+  fi
+
   # ── Pangolin domain ─────────────────────────────────────────────────────────
   local domain
   domain=$(state_get '.domain')
@@ -754,6 +955,24 @@ pangolin_wizard_fresh() {
   local acme_email="$REPLY"
   [[ -n "$acme_email" ]] || die "ACME email is required for TLS certificates"
 
+  # ── Auto-create Cloudflare DNS A record ─────────────────────────────────────
+  # If a CF token is already in state, create pangolin_domain → vps_ip automatically.
+  # DNS-only (not proxied) — WireGuard UDP ports need direct IP access.
+  local cf_token
+  cf_token=$(state_get '.cloudflare_api_token' 2>/dev/null || true)
+  if [[ -n "$cf_token" && "$cf_token" != "null" ]]; then
+    [[ -n "${PORTLESS_CLOUDFLARE_LOADED:-}" ]] || source "${REPO_ROOT}/lib/cloudflare.sh"
+    cf_init "$cf_token"
+    if cf_get_zone_id "$domain" > /dev/null 2>&1; then
+      cf_upsert_a_record "$pangolin_domain" "$vps_ip" false || \
+        log_warn "DNS auto-create failed — add manually: ${pangolin_domain} A ${vps_ip}"
+    else
+      log_warn "Domain '$domain' not in Cloudflare — add DNS manually: ${pangolin_domain} A ${vps_ip}"
+    fi
+  else
+    log_info "No Cloudflare token in state — add DNS manually: ${pangolin_domain} A ${vps_ip}"
+  fi
+
   # ── Admin credentials for Pangolin dashboard ────────────────────────────────
   echo ""
   log_info "These credentials will be used to log into the Pangolin dashboard."
@@ -764,7 +983,7 @@ pangolin_wizard_fresh() {
   [[ ${#admin_password} -ge 8 ]] || die "Password must be at least 8 characters"
 
   # ── Organization and site names ─────────────────────────────────────────────
-  prompt_input "Organization name (short, no spaces)" "homelab"
+  prompt_input "Organization name (short, no spaces)" "portless"
   local org_name="$REPLY"
 
   local hostname
@@ -803,7 +1022,8 @@ pangolin_wizard_fresh() {
     .tunnel.pangolin.vps_host = \"${vps_ip}\" |
     .tunnel.pangolin.domain = \"${pangolin_domain}\" |
     .tunnel.pangolin.org_id = \"${PANGOLIN_ORG_ID:-}\" |
-    .tunnel.pangolin.site_id = ${PANGOLIN_SITE_ID:-0} |
+    .tunnel.pangolin.site_id = \"${PANGOLIN_SITE_ID:-0}\" |
+    .tunnel.pangolin.role_id = \"${PANGOLIN_ROLE_ID:-}\" |
     .tunnel.pangolin.newt_id = \"${NEWT_ID:-}\" |
     .tunnel.pangolin.newt_secret = \"${NEWT_SECRET:-}\" |
     .tunnel.pangolin.ssh_user = \"${ssh_user}\" |
@@ -825,6 +1045,10 @@ pangolin_wizard_fresh() {
   echo -e "  ${BOLD}Admin:${RESET}     ${admin_email}"
   echo -e "  ${BOLD}Org ID:${RESET}    ${PANGOLIN_ORG_ID:-manual}"
   echo -e "  ${BOLD}Site ID:${RESET}   ${PANGOLIN_SITE_ID:-manual}"
+  echo ""
+  echo -e "  ${BOLD}${YELLOW}Enterprise Edition license (free):${RESET}"
+  echo -e "  Get a free key at ${CYAN}https://app.pangolin.net${RESET} → Licenses"
+  echo -e "  Then activate at   ${CYAN}https://${pangolin_domain}/admin/license${RESET}"
   echo ""
 
   _pangolin_crowdsec_tip "$vps_ip" "$pangolin_domain"
@@ -898,9 +1122,59 @@ _pang_prompt_ssh_credentials() {
     PANGOLIN_SSH_AUTH="key"
     prompt_input "SSH username" "root"
     PANGOLIN_SSH_USER="$REPLY"
-    prompt_input "Path to SSH private key" "$HOME/.ssh/id_rsa"
-    PANGOLIN_SSH_KEY="$REPLY"
-    [[ -f "$PANGOLIN_SSH_KEY" ]] || die "SSH key not found: $PANGOLIN_SSH_KEY"
+
+    while true; do
+      prompt_input "Path to SSH private key" "$HOME/.ssh/id_rsa"
+      PANGOLIN_SSH_KEY="$REPLY"
+
+      if [[ -f "$PANGOLIN_SSH_KEY" ]]; then
+        break
+      fi
+
+      log_warn "SSH key not found: $PANGOLIN_SSH_KEY"
+      log_blank
+      prompt_select "What would you like to do?" \
+        "Generate a new SSH key pair" \
+        "Enter a different key path" \
+        "Use password authentication instead"
+
+      case "$REPLY" in
+        "Generate a new SSH key pair")
+          mkdir -p "$(dirname "$PANGOLIN_SSH_KEY")" 2>/dev/null || true
+          if ssh-keygen -t ed25519 -f "$PANGOLIN_SSH_KEY" -N "" -C "portless-$(hostname)" \
+              >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1; then
+            log_ok "SSH key pair created: $PANGOLIN_SSH_KEY"
+            local pub_key
+            pub_key=$(cat "${PANGOLIN_SSH_KEY}.pub")
+            log_blank
+            log_info "Add this public key to your VPS:"
+            echo ""
+            echo -e "  ${BOLD}${pub_key}${RESET}"
+            echo ""
+            log_info "How to add it:"
+            log_info "  • VPS control panel / dashboard (Vultr, Hetzner, DigitalOcean, etc.)"
+            log_info "  • Or paste it into ~/.ssh/authorized_keys on the VPS"
+            log_info "  • Or: ssh-copy-id -i ${PANGOLIN_SSH_KEY}.pub ${PANGOLIN_SSH_USER}@<vps-ip>"
+            log_blank
+            prompt_yn "Press Y once you've added the key to the VPS and are ready to continue" "Y" || true
+            break
+          else
+            log_error "Key generation failed — check permissions on $(dirname "$PANGOLIN_SSH_KEY")"
+          fi
+          ;;
+        "Enter a different key path")
+          # Loop back to prompt_input
+          ;;
+        "Use password authentication instead")
+          PANGOLIN_SSH_AUTH="password"
+          prompt_secret "SSH password"
+          PANGOLIN_SSH_PASS="$REPLY"
+          PANGOLIN_SSH_KEY=""
+          return 0
+          ;;
+      esac
+    done
+
     PANGOLIN_SSH_PASS=""
   else
     PANGOLIN_SSH_AUTH="password"
@@ -939,4 +1213,262 @@ pangolin_register_all_apps() {
 
   # Restart Pangolin + Newt to pick up new resources
   pangolin_restart
+
+  # Ensure all resources are accessible to the admin user
+  local admin_email
+  admin_email=$(state_get '.tunnel.pangolin.admin_email' 2>/dev/null || true)
+  log_sub "Verifying database access grants for all resources..."
+  pangolin_repair_db "${admin_email:-}" || true
+}
+
+# ─── Repair Pangolin database access grants ────────────────────────────────────
+#
+# pangolin_repair_db [admin_email]
+#
+# Runs repair_pangolin_db.cjs inside the Pangolin container to fix missing
+# access-control entries (userOrgs, roleSites, userSites, roleResources).
+# Safe to run multiple times — all operations are INSERT OR IGNORE / UPDATE.
+#
+pangolin_repair_db() {
+  local admin_email="${1:-}"
+
+  local vps_host ssh_user ssh_auth ssh_key ssh_pass
+  vps_host=$(state_get '.tunnel.pangolin.vps_host')
+  ssh_user=$(state_get '.tunnel.pangolin.ssh_user')
+  ssh_auth=$(state_get '.tunnel.pangolin.ssh_auth')
+  ssh_key=$(state_get '.tunnel.pangolin.ssh_key')
+  ssh_pass=$(state_get '.tunnel.pangolin.ssh_pass')
+  ssh_user="${ssh_user:-root}"
+  ssh_auth="${ssh_auth:-key}"
+  ssh_key="${ssh_key:-$HOME/.ssh/id_rsa}"
+
+  [[ -n "$vps_host" ]] || { log_warn "Pangolin VPS not configured — skipping DB repair"; return 0; }
+
+  if [[ -z "$_PANG_VPS_HOST" || "$_PANG_VPS_HOST" != "$vps_host" ]]; then
+    if [[ "$ssh_auth" == "password" ]]; then
+      _pang_init_connection "$vps_host" "$ssh_user" "password" "$ssh_pass"
+    else
+      _pang_init_connection "$vps_host" "$ssh_user" "key" "$ssh_key"
+    fi
+  fi
+
+  [[ -f "$REPAIR_DB_SCRIPT" ]] || { log_warn "repair_pangolin_db.cjs not found at $REPAIR_DB_SCRIPT"; return 1; }
+
+  # Upload repair script to VPS then copy into container
+  _pang_scp_to "$REPAIR_DB_SCRIPT" "/tmp/repair_pangolin_db.cjs" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 \
+    || { log_warn "Could not upload DB repair script to VPS"; return 1; }
+
+  local email_arg=""
+  [[ -n "$admin_email" ]] && email_arg="--email '${admin_email}'"
+
+  local repair_output
+  repair_output=$(_pang_ssh \
+    "sudo docker cp /tmp/repair_pangolin_db.cjs pangolin:/app/repair_pangolin_db.cjs && \
+     sudo docker exec pangolin node /app/repair_pangolin_db.cjs ${email_arg} 2>&1; \
+     sudo docker exec pangolin rm -f /app/repair_pangolin_db.cjs; \
+     rm -f /tmp/repair_pangolin_db.cjs" 2>/dev/null) || true
+
+  echo "$repair_output" >> "${LOG_FILE:-/tmp/portless-install.log}"
+
+  # Display results with colour-coded prefixes
+  local had_fix=false
+  while IFS= read -r line; do
+    case "$line" in
+      FIXED:*)          log_ok    "${line#FIXED: }"; had_fix=true ;;
+      WARNING:*)        log_warn  "${line#WARNING: }" ;;
+      "ERROR: "*)       log_error "${line#ERROR: }" ;;
+      INFO:*)           log_sub   "${line#INFO: }" ;;
+      REPAIR_COMPLETE*) ;;
+    esac
+  done <<< "$repair_output"
+
+  local summary
+  summary=$(echo "$repair_output" | grep "^REPAIR_COMPLETE" || true)
+  if [[ -n "$summary" ]]; then
+    local n_fixed n_issues
+    n_fixed=$(echo  "$summary" | grep -o 'fixed=[0-9]*'  | cut -d= -f2)
+    n_issues=$(echo "$summary" | grep -o 'issues=[0-9]*' | cut -d= -f2)
+    if [[ "$n_fixed" -gt 0 ]]; then
+      log_ok "DB repair: ${n_fixed} issue(s) fixed, ${n_issues} remaining"
+    elif [[ "$n_issues" -gt 0 ]]; then
+      log_warn "DB repair: ${n_issues} issue(s) could not be fixed automatically"
+    else
+      log_ok "DB repair: no issues found"
+    fi
+  else
+    log_warn "DB repair script did not complete cleanly — check ${LOG_FILE:-/tmp/portless-install.log}"
+  fi
+}
+
+# ─── Diagnose Pangolin routing (404 debugging) ────────────────────────────────
+#
+# pangolin_diagnose
+#
+pangolin_diagnose() {
+  _pang_init_ssh_from_state
+
+  [[ -f "$DIAGNOSE_SCRIPT" ]] || { log_warn "diagnose_pangolin.cjs not found"; return 1; }
+
+  _pang_scp_to "$DIAGNOSE_SCRIPT" "/tmp/diagnose_pangolin.cjs" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 || { log_warn "Could not upload diagnose script"; return 1; }
+
+  local output
+  output=$(_pang_ssh \
+    "sudo docker cp /tmp/diagnose_pangolin.cjs pangolin:/app/diagnose_pangolin.cjs && \
+     sudo docker exec pangolin node /app/diagnose_pangolin.cjs 2>&1; \
+     sudo docker exec pangolin rm -f /app/diagnose_pangolin.cjs; \
+     rm -f /tmp/diagnose_pangolin.cjs" 2>/dev/null) || true
+
+  echo "$output"
+}
+
+# ─── Fix 404 errors on Pangolin resources ──────────────────────────────────────
+#
+# pangolin_fix_404 [--dry-run]
+#
+# Fixes: method=https→http, enableProxy, enabled, domain linking
+#
+pangolin_fix_404() {
+  local dry_run="${1:-}"
+  local extra_arg=""
+  [[ "$dry_run" == "--dry-run" ]] && extra_arg="--dry-run"
+
+  _pang_init_ssh_from_state
+
+  [[ -f "$FIX_404_SCRIPT" ]] || { log_warn "fix_404.cjs not found"; return 1; }
+
+  log_step "Fixing 404 causes in Pangolin database${extra_arg:+ (dry run)}"
+
+  _pang_scp_to "$FIX_404_SCRIPT" "/tmp/fix_404.cjs" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 || { log_warn "Could not upload fix_404 script"; return 1; }
+
+  local output
+  output=$(_pang_ssh \
+    "sudo docker cp /tmp/fix_404.cjs pangolin:/app/fix_404.cjs && \
+     sudo docker exec pangolin node /app/fix_404.cjs ${extra_arg} 2>&1; \
+     sudo docker exec pangolin rm -f /app/fix_404.cjs; \
+     rm -f /tmp/fix_404.cjs" 2>/dev/null) || true
+
+  echo "$output" >> "${LOG_FILE:-/tmp/portless-install.log}"
+
+  while IFS= read -r line; do
+    case "$line" in
+      "FIXED "*)       log_ok   "${line#FIXED }" ;;
+      WARNING:*)       log_warn "${line#WARNING: }" ;;
+      "DRY RUN"*)      log_info "$line" ;;
+      FIX_COMPLETE*)
+        local changes
+        changes=$(echo "$line" | grep -o 'changes=[0-9]*' | cut -d= -f2)
+        [[ "$changes" -gt 0 ]] && log_ok "Applied ${changes} fix(es)" || log_ok "No changes needed"
+        ;;
+      "")              ;;
+      *)               log_sub "$line" ;;
+    esac
+  done <<< "$output"
+
+  if [[ -z "$dry_run" ]]; then
+    log_sub "Restarting Pangolin to pick up changes..."
+    pangolin_restart
+    log_ok "Done — try accessing your apps again"
+  fi
+}
+
+# ─── Tunnel health check ───────────────────────────────────────────────────────
+#
+# pangolin_check_tunnel_health
+#
+# Checks: local Newt container, Pangolin VPS reachability, site online status
+#
+pangolin_check_tunnel_health() {
+  log_step "Pangolin Tunnel Health"
+
+  local vps_host domain site_id
+  vps_host=$(state_get '.tunnel.pangolin.vps_host')
+  domain=$(state_get '.tunnel.pangolin.domain')
+  site_id=$(state_get '.tunnel.pangolin.site_id')
+
+  # 1. Local Newt container
+  echo -e "\n  ${BOLD}Newt tunnel client (local):${RESET}"
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^newt$'; then
+    local newt_status
+    newt_status=$(docker inspect --format '{{.State.Status}}' newt 2>/dev/null || echo "unknown")
+    log_ok "  Newt container: ${newt_status}"
+  else
+    log_error "  Newt container: NOT running"
+    log_info "  Fix: docker compose -f <compose_file> up -d newt"
+    local dockerdir hostname compose_file
+    dockerdir=$(state_get '.dockerdir')
+    hostname=$(state_get '.hostname')
+    compose_file="${dockerdir}/docker-compose-${hostname}.yml"
+    [[ -f "$compose_file" ]] && log_info "  File: $compose_file"
+  fi
+
+  # 2. Pangolin VPS reachability
+  echo ""
+  echo -e "  ${BOLD}Pangolin VPS:${RESET}"
+  if [[ -n "$domain" ]]; then
+    if curl -sf --max-time 8 "https://${domain}/api/v1/" &>/dev/null 2>&1; then
+      log_ok "  Pangolin API reachable at https://${domain}"
+    else
+      log_warn "  Pangolin API unreachable at https://${domain}"
+      log_info "  Check DNS, firewall, and Pangolin container status on VPS"
+    fi
+  elif [[ -n "$vps_host" ]]; then
+    if curl -sf --max-time 8 "http://${vps_host}:3001/api/v1/" &>/dev/null 2>&1; then
+      log_ok "  Pangolin health endpoint reachable on VPS ${vps_host}"
+    else
+      log_warn "  Cannot reach Pangolin health endpoint on ${vps_host}:3001"
+    fi
+  fi
+
+  # 3. Site online status (via SSH)
+  echo ""
+  echo -e "  ${BOLD}Site connectivity:${RESET}"
+  if [[ -n "$site_id" && -n "$vps_host" ]]; then
+    local ssh_user ssh_auth ssh_key ssh_pass
+    ssh_user=$(state_get '.tunnel.pangolin.ssh_user')
+    ssh_auth=$(state_get '.tunnel.pangolin.ssh_auth')
+    ssh_key=$(state_get '.tunnel.pangolin.ssh_key')
+    ssh_pass=$(state_get '.tunnel.pangolin.ssh_pass')
+    ssh_user="${ssh_user:-root}"
+    ssh_auth="${ssh_auth:-key}"
+    ssh_key="${ssh_key:-$HOME/.ssh/id_rsa}"
+
+    if [[ -z "$_PANG_VPS_HOST" || "$_PANG_VPS_HOST" != "$vps_host" ]]; then
+      if [[ "$ssh_auth" == "password" ]]; then
+        _pang_init_connection "$vps_host" "$ssh_user" "password" "$ssh_pass"
+      else
+        _pang_init_connection "$vps_host" "$ssh_user" "key" "$ssh_key"
+      fi
+    fi
+
+    local online_status
+    online_status=$(_pang_ssh \
+      "sudo docker exec pangolin node -e \"
+        const db=require('/app/node_modules/better-sqlite3')('/app/config/db/db.sqlite');
+        const row=db.prepare('SELECT name,online FROM sites WHERE siteId=?').get(${site_id});
+        console.log(row ? (row.online ? 'online' : 'offline') + ':' + row.name : 'not_found');
+        db.close();
+      \"" 2>/dev/null || echo "error")
+
+    case "$online_status" in
+      online:*)
+        log_ok "  Site '${online_status#online:}' (id=${site_id}): ONLINE — tunnel active"
+        ;;
+      offline:*)
+        log_error "  Site '${online_status#offline:}' (id=${site_id}): OFFLINE — Newt not connected"
+        log_info "  Check: docker logs newt"
+        log_info "  Check: ssh ${ssh_user}@${vps_host} 'sudo docker logs pangolin | tail -20'"
+        ;;
+      not_found)
+        log_warn "  Site id=${site_id} not found in Pangolin DB — re-run setup"
+        ;;
+      *)
+        log_warn "  Could not query site status (SSH error or Pangolin not running)"
+        ;;
+    esac
+  fi
+
+  echo ""
 }
