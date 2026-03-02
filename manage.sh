@@ -326,6 +326,33 @@ cmd_pangolin() {
     fix-404)
       pangolin_fix_404 "${3:-}"
       ;;
+    auth)
+      # manage.sh pangolin auth [list | <app> on|off]
+      _pang_init_ssh_from_state
+      local auth_sub="${2:-}"
+      case "$auth_sub" in
+        list|"")
+          log_step "Pangolin Resource Auth Status"
+          pangolin_list_app_auth
+          ;;
+        on|off)
+          # manage.sh pangolin auth on|off  — missing app
+          die "Usage: manage.sh pangolin auth <app> on|off"
+          ;;
+        *)
+          # manage.sh pangolin auth <app> on|off
+          local auth_app="$auth_sub"
+          local auth_setting="${3:-}"
+          [[ "$auth_setting" == "on" || "$auth_setting" == "off" ]] \
+            || die "Usage: manage.sh pangolin auth <app> on|off"
+          _require_app_installed "$auth_app"
+          app_has_pangolin "$auth_app" \
+            || die "$auth_app has no Pangolin resource. Run: ./manage.sh pangolin add $auth_app"
+          log_step "Setting Pangolin auth for $auth_app: $auth_setting"
+          pangolin_set_app_auth "$auth_app" "$auth_setting"
+          ;;
+      esac
+      ;;
     status)
       echo -e "\n${BOLD}Pangolin Tunnel:${RESET}"
       echo -e "  VPS:     $(state_get '.tunnel.pangolin.vps_host')"
@@ -334,12 +361,11 @@ cmd_pangolin() {
       echo -e "  Site ID: $(state_get '.tunnel.pangolin.site_id')"
       echo ""
       echo -e "${BOLD}Apps with Pangolin exposure:${RESET}"
-      state_get '.apps | to_entries[] | select(.value.pangolin_resource_id != null) | "  \(.key) → resource \(.value.pangolin_resource_id) port \(.value.internal_port)"'
-      echo ""
+      pangolin_list_app_auth
       pangolin_check_tunnel_health
       ;;
     *)
-      echo "Usage: manage.sh pangolin <setup|add|remove|status|repair-db> [app]"
+      echo "Usage: manage.sh pangolin <setup|add|remove|auth|status|repair-db> [app]"
       ;;
   esac
 }
@@ -896,6 +922,9 @@ ${BOLD}COMMANDS:${RESET}
   ${CYAN}pangolin remove <app>${RESET}       Remove Pangolin exposure for an app
   ${CYAN}pangolin status${RESET}             Show Pangolin config, exposed apps, tunnel health
   ${CYAN}pangolin repair-db${RESET}          Fix admin access grants + resource visibility
+  ${CYAN}pangolin auth${RESET}               Show auth status for all Pangolin-exposed apps
+  ${CYAN}pangolin auth <app> on${RESET}      Require Pangolin SSO login for an app
+  ${CYAN}pangolin auth <app> off${RESET}     Allow public access to an app (no SSO)
   ${CYAN}pangolin diagnose${RESET}           Dump routing state (sites, resources, targets)
   ${CYAN}pangolin fix-404${RESET}            Fix 404s: method, enableProxy, domain linking
   ${CYAN}pangolin fix-404 --dry-run${RESET}  Preview fixes without applying

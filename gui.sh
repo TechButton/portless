@@ -441,21 +441,105 @@ _menu_tunnel() {
     local method
     method=$(_state_get '.tunnel.method // "none"')
 
-    _menu "Tunnel" "Remote access tunnel (current: ${method}):" \
-      "status"    "Status & health check" \
-      "setup"     "Set up / switch tunnel method" \
-      "repair-db" "Repair Pangolin database (fix admin access)" \
-      "cf-proxy"  "Enable Cloudflare proxy on Pangolin DNS" \
-      "back"      "← Back" || return 0
+    if [[ "$method" == "pangolin" ]]; then
+      _menu "Tunnel" "Remote access tunnel (current: ${method}):" \
+        "status"    "Status & health check" \
+        "auth"      "Auth settings — which apps require Pangolin login" \
+        "setup"     "Set up / switch tunnel method" \
+        "repair-db" "Repair Pangolin database (fix admin access)" \
+        "fix-404"   "Fix 404 errors (method/proxy/domain fixes)" \
+        "cf-proxy"  "Enable Cloudflare proxy on Pangolin DNS" \
+        "back"      "← Back" || return 0
+    else
+      _menu "Tunnel" "Remote access tunnel (current: ${method}):" \
+        "status"    "Status & health check" \
+        "setup"     "Set up / switch tunnel method" \
+        "back"      "← Back" || return 0
+    fi
 
     case "$TUI_RESULT" in
       status)    _run "Tunnel status"        "${SCRIPT_DIR}/manage.sh" tunnel status ;;
+      auth)      _menu_pangolin_auth ;;
       setup)     _run "Tunnel setup"         "${SCRIPT_DIR}/manage.sh" tunnel setup ;;
       repair-db) _run "Pangolin DB repair"   "${SCRIPT_DIR}/manage.sh" pangolin repair-db ;;
+      fix-404)   _run "Fix Pangolin 404s"    "${SCRIPT_DIR}/manage.sh" pangolin fix-404 ;;
       cf-proxy)  _run "Cloudflare proxy"     "${SCRIPT_DIR}/manage.sh" tunnel cloudflare-proxy ;;
       back)      return 0 ;;
     esac
   done
+}
+
+# _menu_pangolin_auth — Checklist to pick which Pangolin-exposed apps require SSO login
+_menu_pangolin_auth() {
+  # Get all apps that have a Pangolin resource
+  local pangolin_apps
+  pangolin_apps=$(_state_get \
+    '.apps | to_entries[] | select(.value.pangolin_resource_id != null) | .key' 2>/dev/null)
+
+  if [[ -z "$pangolin_apps" ]]; then
+    _msg "No Pangolin Apps" \
+"No apps are currently exposed via Pangolin.
+Add apps first with: Apps → Add App, then they will appear here."
+    return
+  fi
+
+  # Build checklist: apps currently SSO-protected are pre-checked
+  local items=()
+  while IFS= read -r app; do
+    [[ -z "$app" ]] && continue
+    local current_sso
+    current_sso=$(_state_get ".apps[\"$app\"].pangolin_sso // \"false\"")
+    local state="off"
+    [[ "$current_sso" == "true" ]] && state="on"
+    items+=("$app" "Require login for $app" "$state")
+  done <<< "$pangolin_apps"
+
+  _checklist "Pangolin Auth" \
+"Select which apps require a Pangolin SSO login to access.
+
+  ✓ Checked   = visitors must log in via Pangolin before accessing the app
+  ✗ Unchecked = app is publicly accessible (no Pangolin login required)
+
+Space to toggle, Enter when done:" \
+    "${items[@]}" || return 0
+
+  # Parse selection (whiptail returns quoted names)
+  local selected
+  selected=$(echo "$TUI_RESULT" | tr -d '"')
+
+  # Apply changes: compare new selection vs current state
+  _info "Applying auth settings to Pangolin..."
+
+  local changed=0
+  while IFS= read -r app; do
+    [[ -z "$app" ]] && continue
+    local current_sso
+    current_sso=$(_state_get ".apps[\"$app\"].pangolin_sso // \"false\"")
+
+    local want_sso="false"
+    for sel in $selected; do
+      [[ "$sel" == "$app" ]] && { want_sso="true"; break; }
+    done
+
+    # Only act if the setting changed
+    if [[ "$want_sso" == "true" && "$current_sso" != "true" ]]; then
+      "${SCRIPT_DIR}/manage.sh" pangolin auth "$app" on 2>&1 && changed=$(( changed + 1 )) || true
+    elif [[ "$want_sso" == "false" && "$current_sso" == "true" ]]; then
+      "${SCRIPT_DIR}/manage.sh" pangolin auth "$app" off 2>&1 && changed=$(( changed + 1 )) || true
+    fi
+  done <<< "$pangolin_apps"
+
+  if [[ "$changed" -gt 0 ]]; then
+    _msg "Auth Updated" \
+"Applied auth changes to ${changed} app(s).
+
+Apps you checked now require a Pangolin login.
+Apps you unchecked are publicly accessible.
+
+Changes take effect immediately — no restart needed."
+  else
+    _msg "No Changes" "Auth settings are already up to date."
+  fi
 }
 
 _menu_security() {

@@ -12,6 +12,7 @@ ADD_RESOURCE_SCRIPT="${REPO_ROOT}/templates/pangolin/add_resource.cjs"
 REPAIR_DB_SCRIPT="${REPO_ROOT}/templates/pangolin/repair_pangolin_db.cjs"
 DIAGNOSE_SCRIPT="${REPO_ROOT}/templates/pangolin/diagnose_pangolin.cjs"
 FIX_404_SCRIPT="${REPO_ROOT}/templates/pangolin/fix_404.cjs"
+SET_AUTH_SCRIPT="${REPO_ROOT}/templates/pangolin/set_resource_auth.cjs"
 VPS_INIT_SCRIPT="${REPO_ROOT}/templates/pangolin/vps-init.sh"
 PANGOLIN_COMPOSE_TMPL="${REPO_ROOT}/templates/pangolin/pangolin-compose.yml.tmpl"
 PANGOLIN_CONFIG_TMPL="${REPO_ROOT}/templates/pangolin/pangolin-config.yml.tmpl"
@@ -1372,6 +1373,95 @@ pangolin_fix_404() {
     pangolin_restart
     log_ok "Done — try accessing your apps again"
   fi
+}
+
+# ─── Per-resource auth (SSO on/off) ───────────────────────────────────────────
+#
+# pangolin_set_resource_auth <resource_id> <0|1>
+#
+# Enables (1) or disables (0) Pangolin SSO authentication for a resource.
+# Works by running set_resource_auth.cjs inside the pangolin container.
+#
+pangolin_set_resource_auth() {
+  local resource_id="$1"
+  local sso_val="$2"   # 0 or 1
+
+  [[ -n "$resource_id" ]] || { log_error "pangolin_set_resource_auth: resource_id required"; return 1; }
+  [[ "$sso_val" == "0" || "$sso_val" == "1" ]] || { log_error "pangolin_set_resource_auth: sso_val must be 0 or 1"; return 1; }
+
+  [[ -f "$SET_AUTH_SCRIPT" ]] || { log_warn "set_resource_auth.cjs not found"; return 1; }
+
+  _pang_scp_to "$SET_AUTH_SCRIPT" "/tmp/set_resource_auth.cjs" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 \
+    || { log_warn "Could not upload set_resource_auth script"; return 1; }
+
+  local output
+  output=$(_pang_ssh \
+    "sudo docker cp /tmp/set_resource_auth.cjs pangolin:/app/set_resource_auth.cjs && \
+     sudo docker exec pangolin node /app/set_resource_auth.cjs \
+       --resource-id '${resource_id}' --sso '${sso_val}' 2>&1; \
+     sudo docker exec pangolin rm -f /app/set_resource_auth.cjs; \
+     rm -f /tmp/set_resource_auth.cjs" 2>/dev/null) || true
+
+  if echo "$output" | grep -q "AUTH_SET"; then
+    local label
+    label=$(echo "$output" | grep -o 'name="[^"]*"' | cut -d'"' -f2)
+    if [[ "$sso_val" == "1" ]]; then
+      log_ok "${label:-resource $resource_id}: SSO auth enabled"
+    else
+      log_ok "${label:-resource $resource_id}: SSO auth disabled (public access)"
+    fi
+    return 0
+  else
+    log_warn "Unexpected output from set_resource_auth: $output"
+    return 1
+  fi
+}
+
+#
+# pangolin_set_app_auth <app_name> <on|off>
+#
+# High-level: looks up the app's resource_id from state, calls
+# pangolin_set_resource_auth, then updates state.
+#
+pangolin_set_app_auth() {
+  local app="$1"
+  local setting="$2"   # "on" or "off"
+
+  local resource_id
+  resource_id=$(state_get ".apps[\"$app\"].pangolin_resource_id")
+  [[ -n "$resource_id" && "$resource_id" != "null" ]] \
+    || { log_warn "$app has no Pangolin resource registered"; return 1; }
+
+  local sso_val
+  [[ "$setting" == "on" ]] && sso_val=1 || sso_val=0
+
+  pangolin_set_resource_auth "$resource_id" "$sso_val" || return 1
+
+  # Persist to state
+  state_set ".apps[\"$app\"].pangolin_sso = $([ "$sso_val" = "1" ] && echo "true" || echo "false")"
+}
+
+#
+# pangolin_list_app_auth
+#
+# Prints a table of all Pangolin-exposed apps and their current auth setting.
+#
+pangolin_list_app_auth() {
+  echo ""
+  printf "  %-20s %-12s %-10s\n" "APP" "RESOURCE ID" "SSO AUTH"
+  printf "  %-20s %-12s %-10s\n" "---" "-----------" "--------"
+  while IFS=$'\t' read -r app resource_id sso; do
+    local auth_label
+    [[ "$sso" == "true" ]] && auth_label="${GREEN}on${RESET}" || auth_label="${DIM}off${RESET}"
+    printf "  %-20s %-12s " "$app" "$resource_id"
+    echo -e "$auth_label"
+  done < <(state_get \
+    '.apps | to_entries[]
+     | select(.value.pangolin_resource_id != null)
+     | [.key, (.value.pangolin_resource_id | tostring), (.value.pangolin_sso // "false" | tostring)]
+     | @tsv' 2>/dev/null)
+  echo ""
 }
 
 # ─── Tunnel health check ───────────────────────────────────────────────────────
