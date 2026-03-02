@@ -100,7 +100,7 @@ _check_resume() {
   ' "$candidate" 2>/dev/null || echo "false")
   if [[ "$all_done" == "true" ]]; then
     log_info "A completed install was found. Starting a fresh install will overwrite it."
-    prompt_yn "Start fresh anyway?" "N" || true
+    ans_prompt_yn "FRESH" "Start fresh anyway?" "N" || true
     if [[ "${REPLY^^}" != "Y" ]]; then
       log_info "Use ./manage.sh to manage your existing stack."
       exit 0
@@ -118,7 +118,7 @@ _check_resume() {
   echo -e "  Domain:   ${CYAN}${domain}${RESET}"
   echo -e "  State:    ${CYAN}${candidate}${RESET}"
   echo ""
-  prompt_yn "Resume from where you left off?" "Y" || true
+  ans_prompt_yn "RESUME" "Resume from where you left off?" "Y" || true
   [[ "${REPLY^^}" == "Y" ]] && _restore_cfg_from_state "$candidate"
 }
 
@@ -163,7 +163,7 @@ _migrate_from_old_server() {
   fi
 
   log_blank
-  prompt_yn "Are you migrating from an existing server?" "N" || true
+  ans_prompt_yn "MIGRATE" "Are you migrating from an existing server?" "N" || true
   if [[ "${REPLY^^}" != "Y" ]]; then
     state_set ".install.migration_done = true"
     return 0
@@ -537,7 +537,7 @@ phase1_system_check() {
 
   if [[ ${#missing_tools[@]} -gt 0 ]]; then
     log_warn "Missing tools: ${missing_tools[*]}"
-    if prompt_yn "Install missing tools now?" "Y"; then
+    if ans_prompt_yn "INSTALL_TOOLS" "Install missing tools now?" "Y"; then
       detect_os
       case "$OS_FAMILY" in
         debian)  sudo apt-get install -y -qq "${missing_tools[@]}" ;;
@@ -944,7 +944,7 @@ EOF
 
     Pangolin*)
       TUNNEL_METHOD="pangolin"
-      prompt_select "Pangolin setup:" \
+      ans_prompt_select "PANGOLIN_SETUP" "Pangolin setup:" \
         "Install Pangolin on a fresh VPS (recommended)" \
         "Connect to an existing Pangolin instance"
       if [[ "$REPLY" == Install* ]]; then
@@ -1368,7 +1368,7 @@ _deploy_stack() {
   echo -e "  Env file:     ${CYAN}${CFG_DOCKERDIR}/.env${RESET}"
   echo ""
 
-  if prompt_yn "Start the stack now?" "Y"; then
+  if ans_prompt_yn "START_STACK" "Start the stack now?" "Y"; then
     log_sub "Running: docker compose up -d"
     docker compose \
       --env-file "${CFG_DOCKERDIR}/.env" \

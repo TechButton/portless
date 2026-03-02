@@ -207,19 +207,21 @@ ans_prompt_yn() {
 # Matches INSTALL_<KEY> against options using case-insensitive prefix match.
 # Falls back to interactive prompt if no match is found.
 ans_prompt_select() {
+  local _key_name="$1"
   local _key="INSTALL_${1}"
   local _prompt="$2"; shift 2
   if [[ -n "${!_key:-}" ]]; then
     local _val="${!_key,,}"
     local _opt
     for _opt in "$@"; do
-      if [[ "${_opt,,}" =~ ^${_val} ]]; then
+      # Use glob prefix match (not regex) so special chars like () — don't break
+      if [[ "${_opt,,}" == "${_val}"* || "${_opt,,}" == *"${_val}"* ]]; then
         REPLY="$_opt"
         log_sub "${_prompt}: ${REPLY}  ${DIM}(answers file)${RESET}"
         return 0
       fi
     done
-    log_warn "INSTALL_${1}='${!_key}' did not match any option — prompting interactively"
+    log_warn "INSTALL_${_key_name}='${!_key}' did not match any option — prompting interactively"
   fi
   prompt_select "$_prompt" "$@"
 }
