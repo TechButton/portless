@@ -814,8 +814,16 @@ tinyauth_setup_secret() {
   local secrets_dir="${dockerdir}/secrets"
   ensure_dir "$secrets_dir"
 
+  # TinyAuth v3 validates Secret with len=32 (exactly 32 chars, no newline)
+  local _need_gen=0
   if [[ ! -f "${secrets_dir}/tinyauth_secret" ]]; then
-    openssl rand -hex 32 > "${secrets_dir}/tinyauth_secret"
+    _need_gen=1
+  elif [[ $(wc -c < "${secrets_dir}/tinyauth_secret" 2>/dev/null) -ne 32 ]]; then
+    log_sub "TinyAuth secret wrong length — regenerating"
+    _need_gen=1
+  fi
+  if [[ "$_need_gen" -eq 1 ]]; then
+    printf '%s' "$(openssl rand -hex 16)" > "${secrets_dir}/tinyauth_secret"
     chmod 600 "${secrets_dir}/tinyauth_secret"
     log_sub "TinyAuth session secret generated"
   else

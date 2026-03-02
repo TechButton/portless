@@ -2,6 +2,7 @@
 
 An interactive setup wizard and management CLI for a self-hosted media stack. No port forwarding, no exposed home IP, no router changes required.
 
+[![Version](https://img.shields.io/badge/version-0.8.5-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/techbutton)
 
@@ -25,6 +26,8 @@ chmod +x install.sh manage.sh
 ```
 
 The wizard is fully interactive. It detects your OS, offers to install Docker if missing, and steps you through everything one question at a time.
+
+For a TUI experience run `./gui.sh` instead. For unattended installs, copy `portless-answers.sh.example` to `portless-answers.sh`, fill it in, and pass it to the installer.
 
 ---
 
@@ -109,10 +112,10 @@ Before switching to production certs, the installer runs a **staging certificate
 | *Arr | Sonarr, Radarr, Lidarr, Bazarr, Prowlarr |
 | Books / Comics | Kavita, Komga, Calibre-Web, Mylar3 |
 | Music | Navidrome |
-| Audiobooks | Audiobookshelf |
+| Audiobooks | Audiobookshelf, Readmeabook |
 | Downloads | SABnzbd, qBittorrent+VPN (Gluetun) |
 | Management | Portainer, VS Code, Dozzle, WUD, Uptime Kuma, IT-Tools, Glances |
-| Requests | Overseerr, Jellyseerr |
+| Requests | Jellyseerr (Seerr), Overseerr |
 | Media Tools | Kometa, Maintainerr, Notifiarr, Tautulli |
 | Other | Stirling PDF, and 90+ more optional apps |
 
@@ -142,7 +145,10 @@ Before switching to production certs, the installer runs a **staging certificate
 # Pangolin
 ./manage.sh pangolin add radarr     # Expose specific app via Pangolin
 ./manage.sh pangolin remove radarr  # Remove Pangolin exposure
+./manage.sh pangolin sso radarr on  # Enable Pangolin SSO gate for an app
+./manage.sh pangolin sso radarr off # Disable Pangolin SSO gate for an app
 ./manage.sh pangolin status         # Show config and exposed apps
+./manage.sh pangolin repair-db      # Fix common Pangolin DB issues (permissions, routing)
 ```
 
 ---
@@ -153,6 +159,8 @@ Before switching to production certs, the installer runs a **staging certificate
 portless/
 ├── install.sh                    # Interactive setup wizard
 ├── manage.sh                     # Management CLI
+├── gui.sh                        # Optional whiptail TUI wrapper
+├── portless-answers.sh.example   # Template for headless/unattended installs
 ├── lib/
 │   ├── common.sh                 # Logging, prompts, helpers
 │   ├── docker.sh                 # Docker installer
@@ -164,7 +172,7 @@ portless/
 │   ├── tailscale.sh              # Tailscale VPN
 │   ├── headscale.sh              # Headscale (self-hosted Tailscale)
 │   ├── netbird.sh                # Netbird WireGuard mesh
-│   └── apps/                     # Per-app catalog (21 apps)
+│   └── apps/                     # Per-app catalog
 │       ├── crowdsec.sh
 │       ├── tinyauth.sh
 │       └── ...
@@ -176,12 +184,19 @@ portless/
 │   │   ├── app-tinyauth.yml.tmpl
 │   │   └── app-basic-auth.yml.tmpl
 │   ├── pangolin/                 # Pangolin VPS setup scripts
+│   │   ├── setup_pangolin.cjs    # Zero-API initial DB setup
+│   │   ├── add_resource.cjs      # Register HTTP resources in Pangolin DB
+│   │   ├── fix_pangolin.cjs      # Comprehensive DB repair (9 fixes)
+│   │   ├── set_resource_auth.cjs # Toggle SSO per resource
+│   │   └── *.tmpl                # Config/compose templates
 │   ├── headscale/                # Headscale VPS setup
 │   └── netbird/                  # Netbird management stack
 └── docs/
     ├── getting-started.md
     ├── remote-access.md
     ├── pangolin-guide.md
+    ├── pangolin-api-database.md  # Pangolin EE SQLite schema reference
+    ├── migrating.md              # Moving an existing stack to a new server
     ├── adding-apps.md
     └── troubleshooting.md
 ```
@@ -196,6 +211,7 @@ portless/
 - [Adding Apps](docs/adding-apps.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [References & Credits](docs/references.md) — every open source project that powers the stack
+- [Changelog](CHANGELOG.md)
 
 ---
 

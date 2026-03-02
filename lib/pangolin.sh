@@ -199,6 +199,11 @@ pangolin_install_vps() {
   local base_domain
   base_domain=$(echo "$pangolin_domain" | cut -d. -f2-)
 
+  # WireGuard endpoint: separate DNS-only subdomain so WireGuard UDP bypasses
+  # Cloudflare proxy (which only handles TCP/HTTPS, not UDP).
+  # Use wg.<base_domain> — e.g. wg.example.com → VPS IP, DNS-only, no Cloudflare proxy.
+  local wg_endpoint="wg.${base_domain}"
+
   # Generate a random secret for this Pangolin instance (min 32 chars, required)
   # Use openssl only — tr+head triggers pipefail (tr gets SIGPIPE when head closes the pipe)
   local pangolin_secret
@@ -217,7 +222,8 @@ pangolin_install_vps() {
     "PANGOLIN_DOMAIN=${pangolin_domain}" \
     "BASE_DOMAIN=${base_domain}" \
     "ACME_EMAIL=${acme_email}" \
-    "SECRET=${pangolin_secret}"
+    "SECRET=${pangolin_secret}" \
+    "WG_ENDPOINT=${wg_endpoint}"
 
   render_template "$PANGOLIN_TRAEFIK_TMPL" "$tmp_traefik" \
     "ACME_EMAIL=${acme_email}"
@@ -665,6 +671,10 @@ pangolin_setup_newt() {
     image: fosrl/newt:latest
     container_name: newt
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
     environment:
       - PANGOLIN_ENDPOINT=https://${pangolin_host}
       - NEWT_ID=${newt_id}
@@ -957,22 +967,31 @@ USERADD_SCRIPT
   local acme_email="$REPLY"
   [[ -n "$acme_email" ]] || die "ACME email is required for TLS certificates"
 
-  # ── Auto-create Cloudflare DNS A record ─────────────────────────────────────
-  # If a CF token is already in state, create pangolin_domain → vps_ip automatically.
-  # DNS-only (not proxied) — WireGuard UDP ports need direct IP access.
+  # ── Auto-create Cloudflare DNS A records ────────────────────────────────────
+  # pangolin.<domain>  → proxied (Cloudflare provides TLS for dashboard/API)
+  # wg.<domain>        → DNS-only (WireGuard UDP 21820 bypasses Cloudflare proxy)
   local cf_token
   cf_token=$(state_get '.cloudflare_api_token' 2>/dev/null || true)
+  local wg_host="wg.${domain}"
   if [[ -n "$cf_token" && "$cf_token" != "null" ]]; then
     [[ -n "${PORTLESS_CLOUDFLARE_LOADED:-}" ]] || source "${REPO_ROOT}/lib/cloudflare.sh"
     cf_init "$cf_token"
     if cf_get_zone_id "$domain" > /dev/null 2>&1; then
-      cf_upsert_a_record "$pangolin_domain" "$vps_ip" false || \
-        log_warn "DNS auto-create failed — add manually: ${pangolin_domain} A ${vps_ip}"
+      # Pangolin dashboard — Cloudflare-proxied for TLS
+      cf_upsert_a_record "$pangolin_domain" "$vps_ip" true || \
+        log_warn "DNS auto-create failed — add manually: ${pangolin_domain} A ${vps_ip} (proxied)"
+      # WireGuard endpoint — DNS-only so UDP reaches VPS directly
+      cf_upsert_a_record "$wg_host" "$vps_ip" false || \
+        log_warn "DNS auto-create failed — add manually: ${wg_host} A ${vps_ip} (DNS-only)"
     else
-      log_warn "Domain '$domain' not in Cloudflare — add DNS manually: ${pangolin_domain} A ${vps_ip}"
+      log_warn "Domain '$domain' not in Cloudflare — add DNS manually:"
+      log_warn "  ${pangolin_domain} A ${vps_ip} (proxied)"
+      log_warn "  ${wg_host} A ${vps_ip} (DNS-only)"
     fi
   else
-    log_info "No Cloudflare token in state — add DNS manually: ${pangolin_domain} A ${vps_ip}"
+    log_info "No Cloudflare token in state — add DNS manually:"
+    log_info "  ${pangolin_domain} A ${vps_ip} (Cloudflare-proxied)"
+    log_info "  ${wg_host} A ${vps_ip} (DNS-only, not proxied)"
   fi
 
   # ── Admin credentials for Pangolin dashboard ────────────────────────────────

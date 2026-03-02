@@ -1174,6 +1174,10 @@ EOF
     image: fosrl/newt:latest
     container_name: newt
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
     environment:
       - PANGOLIN_ENDPOINT=https://${PANGOLIN_HOST}
       - NEWT_ID=${NEWT_ID}

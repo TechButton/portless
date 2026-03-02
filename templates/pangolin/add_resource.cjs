@@ -96,8 +96,25 @@ try {
 
   const resCols = db.prepare("PRAGMA table_info('resources')").all().map(r => r.name);
 
+  // Find domainId by matching baseDomain against the fullDomain suffix
+  // e.g. fullDomain='plex.example.com' → look for baseDomain='example.com'
+  let domainId = null;
+  if (allTables.includes("domains")) {
+    const allDomains = db.prepare("SELECT domainId, baseDomain FROM domains").all();
+    // Sort by length desc so more-specific domains match first
+    allDomains.sort((a, b) => b.baseDomain.length - a.baseDomain.length);
+    for (const d of allDomains) {
+      if (fullDomain === d.baseDomain || fullDomain.endsWith("." + d.baseDomain)) {
+        domainId = d.domainId;
+        break;
+      }
+    }
+  }
+
   const result = db.transaction(() => {
     // Insert resource (EE schema: no siteId/targetPort/targetHost/method in resources)
+    // NOTE: 'sso' column defaults to 1 in Pangolin EE, so we must always set it explicitly.
+    const ssoVal = ssoEnabled ? 1 : 0;
     const resResult = db.prepare(`
       INSERT INTO resources (
         resourceGuid,
@@ -106,15 +123,17 @@ try {
         name,
         subdomain,
         fullDomain,
+        domainId,
         ssl,
         http,
         protocol,
         proxyPort,
         tlsServerName,
         enabled,
-        enableProxy
-      ) VALUES (?, ?, ?, ?, ?, ?, 1, 1, 'tcp', ?, ?, 1, 1)
-    `).run(resourceGuid, orgId, niceId, name, subdomainPart, fullDomain, httpPort, fullDomain);
+        enableProxy,
+        sso
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 'tcp', ?, ?, 1, 1, ?)
+    `).run(resourceGuid, orgId, niceId, name, subdomainPart, fullDomain, domainId, httpPort, fullDomain, ssoVal);
 
     const resourceId = resResult.lastInsertRowid;
 
@@ -134,9 +153,11 @@ try {
       ) VALUES (?, ?, ?, ?, ?, ?, 1, 100)
     `).run(resourceId, siteId, targetHost, targetMethod, targetPort, httpPort);
 
-    // ── Admin role access grant ─────────────────────────────────────────────
-    // In Pangolin EE some versions require explicit roleResources/resourceRoles entries
-    // even for isAdmin=1 roles. Create the entry so the admin dashboard shows the resource.
+    // ── Admin role + user access grants ────────────────────────────────────
+    // Pangolin EE requires explicit entries in BOTH roleResources AND userResources
+    // for resources to appear in the dashboard and be accessible via SSO.
+
+    // roleResources: admin role → resource
     const rrTable = allTables.find(t => t === "roleResources") ||
                     allTables.find(t => t === "resourceRoles") || null;
     if (rrTable) {
@@ -150,22 +171,26 @@ try {
             db.prepare(
               `INSERT OR IGNORE INTO ${rrTable} (resourceId, roleId) VALUES (?, ?)`
             ).run(resourceId, adminRole.roleId);
-          } catch (_) { /* non-fatal: isAdmin=1 may already grant access */ }
+          } catch (_) { /* non-fatal */ }
         }
       }
     }
 
-    // ── SSO protection (Pangolin EE) ────────────────────────────────────────
-    // When --sso 1 is passed, mark the resource to require Pangolin SSO login.
-    // NOTE: isShareableSite is intentionally excluded — it is NOT an auth flag.
-    // Setting isShareableSite=1 switches to "public shareable site" mode which
-    // conflicts with enableProxy=1 and causes the UI redirect loop.
-    if (ssoEnabled) {
-      for (const col of ["sso", "requireAuth"]) {
-        if (resCols.includes(col)) {
-          db.prepare(`UPDATE resources SET ${col} = 1 WHERE resourceId = ?`).run(resourceId);
-          break;
-        }
+    // userResources: each org user → resource (required for dashboard visibility)
+    if (allTables.includes("userResources")) {
+      const userTable = allTables.includes("user") ? "user" : "users";
+      const userPkCol = db.prepare(`PRAGMA table_info('${userTable}')`).all()
+        .map(r => r.name).includes("id") ? "id" : "userId";
+      const orgUsers = db.prepare(
+        `SELECT u.${userPkCol} AS uid FROM ${userTable} u
+         JOIN userOrgs uo ON uo.userId = u.${userPkCol}
+         WHERE uo.orgId = ?`
+      ).all(orgId);
+      for (const { uid } of orgUsers) {
+        try {
+          db.prepare("INSERT OR IGNORE INTO userResources (userId, resourceId) VALUES (?, ?)")
+            .run(uid, resourceId);
+        } catch (_) { /* non-fatal */ }
       }
     }
 

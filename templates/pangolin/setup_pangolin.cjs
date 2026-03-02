@@ -122,11 +122,14 @@ async function main() {
   const emailVerCol    = userCols.includes("emailVerified") ? "emailVerified" : "emailVerified";
 
   const username = email.split("@")[0];
+  // Include termsAcceptedTimestamp if column exists (required for dashboard access in Pangolin EE)
+  const termsCol = userCols.includes("termsAcceptedTimestamp") ? ", termsAcceptedTimestamp" : "";
+  const termsVal = userCols.includes("termsAcceptedTimestamp") ? `, ${Date.now()}` : "";
   db.prepare(`
     INSERT INTO ${userTable}
       (${userPkCol}, email, username, name, type, ${passwordCol},
-       twoFactorEnabled, ${emailVerCol}, dateCreated, ${serverAdminCol})
-    VALUES (?, ?, ?, ?, 'internal', ?, 0, 1, ?, 1)
+       twoFactorEnabled, ${emailVerCol}, dateCreated, ${serverAdminCol}${termsCol})
+    VALUES (?, ?, ?, ?, 'internal', ?, 0, 1, ?, 1${termsVal})
   `).run(userId, email.toLowerCase(), username, username, passwordHash, now);
 
   // ── Steps 5–7: Org, role, site, newt ─────────────────────────────────────────
@@ -177,6 +180,38 @@ async function main() {
       VALUES (?, ?, ?, 'newt', 0, 1)
     `).run(orgId, niceId, siteName);
     siteId = siteResult.lastInsertRowid;
+
+    // 5d. Grant all actions to the admin role (roleActions) and the admin user (userActions)
+    // Pangolin EE requires explicit per-action grants even for isAdmin=1 roles.
+    // The actions table is seeded by migrations and has 100+ rows.
+    const allTables2 = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(r => r.name);
+    if (allTables2.includes("roleActions") && allTables2.includes("actions")) {
+      const raCols = getColumns(db, "roleActions");
+      const allActions = db.prepare("SELECT actionId FROM actions").all().map(r => r.actionId);
+      const raHasOrg = raCols.includes("orgId");
+      for (const actionId of allActions) {
+        try {
+          if (raHasOrg) {
+            db.prepare("INSERT OR IGNORE INTO roleActions (roleId, actionId, orgId) VALUES (?, ?, ?)").run(roleId, actionId, orgId);
+          } else {
+            db.prepare("INSERT OR IGNORE INTO roleActions (roleId, actionId) VALUES (?, ?)").run(roleId, actionId);
+          }
+        } catch (_) { /* non-fatal */ }
+      }
+      if (allTables2.includes("userActions")) {
+        const uaCols = getColumns(db, "userActions");
+        const uaHasOrg = uaCols.includes("orgId");
+        for (const actionId of allActions) {
+          try {
+            if (uaHasOrg) {
+              db.prepare("INSERT OR IGNORE INTO userActions (userId, actionId, orgId) VALUES (?, ?, ?)").run(userId, actionId, orgId);
+            } else {
+              db.prepare("INSERT OR IGNORE INTO userActions (userId, actionId) VALUES (?, ?)").run(userId, actionId);
+            }
+          } catch (_) { /* non-fatal */ }
+        }
+      }
+    }
 
     // 6b. Grant access
     db.prepare("INSERT INTO roleSites (roleId, siteId) VALUES (?, ?)").run(roleId, siteId);
