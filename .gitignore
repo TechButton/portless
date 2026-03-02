@@ -1,12 +1,12 @@
 # State file — contains secrets, never commit
-.homelab-state.json
+.portless-state.json
 
 # Generated .env — contains credentials
 .env
 *.env
 
 # Install log
-/tmp/homelab-*.log
+/tmp/portless-*.log
 
 # OS
 .DS_Store

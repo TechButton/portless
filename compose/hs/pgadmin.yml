@@ -17,6 +17,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
     environment:
       TZ: $TZ
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@homelab.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@portless.local}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-changeme123}
     # DOCKER-LABELS-PLACEHOLDER

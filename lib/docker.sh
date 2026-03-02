@@ -2,8 +2,8 @@
 # lib/docker.sh — Docker + Docker Compose v2 installation helpers
 
 # shellcheck source=lib/common.sh
-[[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-HOMELAB_DOCKER_LOADED=1
+[[ -n "$PORTLESS_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+PORTLESS_DOCKER_LOADED=1
 
 # ─── Detection ──────────────────────────────────────────────────────────────────
 

@@ -344,6 +344,9 @@ cmd_pangolin() {
       log_step "Pangolin Diagnostics"
       pangolin_diagnose
       ;;
+    fix-all)
+      pangolin_fix_all "${3:-}"
+      ;;
     fix-404)
       pangolin_fix_404 "${3:-}"
       ;;
@@ -904,6 +907,37 @@ EOF
     fi
   done <<< "$apps"
 
+  # Re-add tunnel client if configured
+  local tunnel_method
+  tunnel_method=$(state_get '.tunnel.method // "none"')
+  case "$tunnel_method" in
+    pangolin)
+      local newt_id newt_secret newt_endpoint pangolin_domain pangolin_host
+      newt_id=$(state_get '.tunnel.pangolin.newt_id')
+      newt_secret=$(state_get '.tunnel.pangolin.newt_secret')
+      pangolin_domain=$(state_get '.tunnel.pangolin.domain')
+      pangolin_host=$(state_get '.tunnel.pangolin.vps_host')
+      newt_endpoint="${pangolin_domain:-$pangolin_host}"
+      if [[ -n "$newt_id" && -n "$newt_secret" ]]; then
+        pangolin_setup_newt "$newt_id" "$newt_secret" "$newt_endpoint" "$compose_file"
+      fi
+      ;;
+    cloudflare)
+      local cf_token
+      cf_token=$(state_get '.tunnel.cloudflare.tunnel_token')
+      [[ -n "$cf_token" ]] && cf_setup_cloudflared "$cf_token" "$compose_file"
+      ;;
+    tailscale)
+      tailscale_setup_compose "$compose_file"
+      ;;
+    headscale)
+      headscale_setup_compose "$compose_file"
+      ;;
+    netbird)
+      netbird_setup_compose "$compose_file"
+      ;;
+  esac
+
   log_ok "Compose file regenerated: $compose_file"
 }
 
@@ -947,8 +981,9 @@ ${BOLD}COMMANDS:${RESET}
   ${CYAN}pangolin auth <app> on${RESET}      Require Pangolin SSO login for an app
   ${CYAN}pangolin auth <app> off${RESET}     Allow public access to an app (no SSO)
   ${CYAN}pangolin diagnose${RESET}           Dump routing state (sites, resources, targets)
-  ${CYAN}pangolin fix-404${RESET}            Fix 404s: method, enableProxy, domain linking
-  ${CYAN}pangolin fix-404 --dry-run${RESET}  Preview fixes without applying
+  ${CYAN}pangolin fix-all${RESET}            Fix all known issues: UI loop, 404s, domains, roles
+  ${CYAN}pangolin fix-all --dry-run${RESET}  Preview fixes without applying
+  ${CYAN}pangolin fix-404${RESET}            Fix 404s only: method, enableProxy, domain linking
 
 ${BOLD}SUPPORTED APPS:${RESET}
 $(ls "${SCRIPT_DIR}/lib/apps/"*.sh 2>/dev/null | xargs -I{} basename {} .sh | sed 's/^/  /')

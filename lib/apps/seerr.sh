@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: Seerr
+APP_NAME="seerr"
+APP_DESCRIPTION="Media request management — lets users request movies and TV shows; works with Plex, Jellyfin, and Emby (replaces Overseerr)"
+APP_CATEGORY="requests"
+APP_PORT_VAR="SEERR_PORT"
+APP_DEFAULT_HOST_PORT="5055"
+APP_SERVICE_PORT="5055"
+APP_DEFAULT_SUBDOMAIN="requests"
+APP_AUTH="none"
+APP_PROFILES="requests,all"
+APP_IMAGE="seerr/seerr:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/seerr.yml"
+APP_APPDATA_DIR="appdata/seerr"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="Seerr is a drop-in replacement for Overseerr. Supports Plex, Jellyfin, and Emby. Has built-in auth — no additional middleware needed."

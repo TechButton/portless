@@ -11,8 +11,8 @@
 #   https://developers.cloudflare.com/api/
 #   https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
 
-[[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-HOMELAB_CLOUDFLARE_LOADED=1
+[[ -n "$PORTLESS_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+PORTLESS_CLOUDFLARE_LOADED=1
 
 # ─── API helpers ───────────────────────────────────────────────────────────────
 
@@ -237,6 +237,39 @@ cf_create_tunnel_dns() {
   log_ok "DNS record set: *.${domain} → ${tunnel_cname}"
 }
 
+# cf_upsert_a_record <record_name> <ip> [proxied=false]
+#
+# Creates or updates an A record in the current zone (_CF_ZONE_ID must be set).
+# Use proxied=false for Pangolin (WireGuard UDP needs direct IP access).
+#
+cf_upsert_a_record() {
+  local name="$1"
+  local ip="$2"
+  local proxied="${3:-false}"
+
+  log_sub "Setting DNS A record: ${name} → ${ip}"
+
+  local existing existing_id
+  existing=$(_cf_api GET "/zones/${_CF_ZONE_ID}/dns_records?type=A&name=${name}")
+  existing_id=$(echo "$existing" | jq -r '.result[0].id // empty')
+
+  local body
+  body=$(jq -n \
+    --arg name "$name" --arg ip "$ip" --argjson proxied "$proxied" \
+    '{"type":"A","name":$name,"content":$ip,"proxied":$proxied,"ttl":1}')
+
+  local resp
+  if [[ -n "$existing_id" ]]; then
+    resp=$(_cf_api PUT "/zones/${_CF_ZONE_ID}/dns_records/${existing_id}" "$body")
+    _cf_check "$resp" "update A record"
+    log_ok "Updated DNS: ${name} → ${ip} (DNS only)"
+  else
+    resp=$(_cf_api POST "/zones/${_CF_ZONE_ID}/dns_records" "$body")
+    _cf_check "$resp" "create A record"
+    log_ok "Created DNS: ${name} → ${ip} (DNS only)"
+  fi
+}
+
 # cf_delete_tunnel_dns <domain>
 cf_delete_tunnel_dns() {
   local domain="$1"
@@ -343,7 +376,7 @@ cf_wizard_fresh() {
   # Tunnel name based on hostname
   local hostname
   hostname=$(state_get '.hostname')
-  local tunnel_name="${hostname:-homelab}-tunnel"
+  local tunnel_name="${hostname:-portless}-tunnel"
 
   # Check if a tunnel with this name already exists
   log_sub "Checking for existing tunnel: $tunnel_name"

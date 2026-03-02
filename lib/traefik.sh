@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # lib/traefik.sh — Traefik setup wizard, compose generation, and dynamic rule generation
 
-[[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-HOMELAB_TRAEFIK_LOADED=1
+[[ -n "$PORTLESS_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+PORTLESS_TRAEFIK_LOADED=1
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -892,7 +892,7 @@ EOF
   local cert_found=false
   while (( attempts < 30 )); do
     sleep 10
-    (( attempts++ ))
+    attempts=$(( attempts + 1 ))
     local cert_count
     cert_count=$(jq -r '[.. | .certificate? // empty] | length' "$acme_json" 2>/dev/null || echo 0)
     if (( cert_count > 0 )); then

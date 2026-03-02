@@ -47,8 +47,11 @@ if (!resRow) {
 
 const resCols = db.prepare("PRAGMA table_info('resources')").all().map(r => r.name);
 
-// Try each known SSO column name in priority order
-const ssoCol = ["isShareableSite", "sso", "requireAuth"].find(c => resCols.includes(c));
+// Try each known SSO/auth column in priority order.
+// NOTE: isShareableSite is intentionally excluded — it is NOT an auth flag.
+// Setting isShareableSite=1 switches a resource to "public shareable site" mode
+// which conflicts with enableProxy=1 and causes the UI redirect loop.
+const ssoCol = ["sso", "requireAuth"].find(c => resCols.includes(c));
 
 if (!ssoCol) {
   // No SSO column — not supported in this build, exit cleanly

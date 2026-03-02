@@ -157,9 +157,11 @@ try {
 
     // ── SSO protection (Pangolin EE) ────────────────────────────────────────
     // When --sso 1 is passed, mark the resource to require Pangolin SSO login.
-    // Column names vary by EE version — try the most common ones.
+    // NOTE: isShareableSite is intentionally excluded — it is NOT an auth flag.
+    // Setting isShareableSite=1 switches to "public shareable site" mode which
+    // conflicts with enableProxy=1 and causes the UI redirect loop.
     if (ssoEnabled) {
-      for (const col of ["isShareableSite", "sso", "requireAuth"]) {
+      for (const col of ["sso", "requireAuth"]) {
         if (resCols.includes(col)) {
           db.prepare(`UPDATE resources SET ${col} = 1 WHERE resourceId = ?`).run(resourceId);
           break;

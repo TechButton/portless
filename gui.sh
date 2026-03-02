@@ -447,7 +447,7 @@ _menu_tunnel() {
         "auth"      "Auth settings — which apps require Pangolin login" \
         "setup"     "Set up / switch tunnel method" \
         "repair-db" "Repair Pangolin database (fix admin access)" \
-        "fix-404"   "Fix 404 errors (method/proxy/domain fixes)" \
+        "fix-all"   "Fix all issues (UI loop, 404s, domains, roles)" \
         "cf-proxy"  "Enable Cloudflare proxy on Pangolin DNS" \
         "back"      "← Back" || return 0
     else
@@ -462,7 +462,7 @@ _menu_tunnel() {
       auth)      _menu_pangolin_auth ;;
       setup)     _run "Tunnel setup"         "${SCRIPT_DIR}/manage.sh" tunnel setup ;;
       repair-db) _run "Pangolin DB repair"   "${SCRIPT_DIR}/manage.sh" pangolin repair-db ;;
-      fix-404)   _run "Fix Pangolin 404s"    "${SCRIPT_DIR}/manage.sh" pangolin fix-404 ;;
+      fix-all)   _run "Fix Pangolin issues"   "${SCRIPT_DIR}/manage.sh" pangolin fix-all ;;
       cf-proxy)  _run "Cloudflare proxy"     "${SCRIPT_DIR}/manage.sh" tunnel cloudflare-proxy ;;
       back)      return 0 ;;
     esac

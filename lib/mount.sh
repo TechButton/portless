@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # lib/mount.sh — NFS and SMB/CIFS mount helpers for the data directory
 
-[[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-HOMELAB_MOUNT_LOADED=1
+[[ -n "$PORTLESS_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+PORTLESS_MOUNT_LOADED=1
 
 # ─── Package installer ───────────────────────────────────────────────────────
 
@@ -31,41 +31,56 @@ _mount_sudo_create() {
 
 # _mount_nfs_one <server> <export> <local_dir> <nfs_ver> <user>
 # Mounts a single NFS export with a retry loop. Returns 0 on success.
+# Cleans up the local directory if it was created here but the mount never succeeded.
 _mount_nfs_one() {
   local nfs_server="$1" export_path="$2" local_dir="$3" nfs_ver="$4" user="$5"
+  local created_dir=0
 
-  # Create subfolder if needed
+  # Create subfolder if needed — track if we created it so we can remove it on failure
   if [[ ! -d "$local_dir" ]]; then
     sudo mkdir -p "$local_dir" || { log_error "Could not create $local_dir"; return 1; }
+    created_dir=1
   fi
 
   while true; do
-    log_sub "Mounting ${nfs_server}:${export_path} → ${local_dir}..."
-    if sudo mount -t nfs -o "nfsvers=${nfs_ver}" "${nfs_server}:${export_path}" "$local_dir"; then
-      log_ok "Mounted → ${local_dir}"
-      sudo chown "${user}:${user}" "$local_dir" 2>/dev/null || true
+    # Try the requested version; if v4 fails, automatically fall back to v3
+    local try_ver
+    for try_ver in "$nfs_ver" $( [[ "$nfs_ver" == "4" ]] && echo "3" ); do
+      [[ "$try_ver" == "$nfs_ver" ]] || log_warn "NFSv4 failed — retrying with NFSv3..."
+      log_sub "Mounting ${nfs_server}:${export_path} → ${local_dir} (NFSv${try_ver})..."
+      if sudo mount -t nfs -o "nfsvers=${try_ver}" "${nfs_server}:${export_path}" "$local_dir"; then
+        log_ok "Mounted → ${local_dir}"
+        [[ "$try_ver" != "$nfs_ver" ]] && log_sub "Used NFSv3 (server does not support NFSv4)"
+        sudo chown "${user}:${user}" "$local_dir" 2>/dev/null || true
 
-      # Add fstab entry with _netdev (wait for network) and nofail (don't block boot)
-      local fstab_entry="${nfs_server}:${export_path} ${local_dir} nfs nfsvers=${nfs_ver},defaults,_netdev,nofail 0 0"
-      if grep -qsF "$local_dir" /etc/fstab; then
-        log_warn "fstab entry for ${local_dir} already exists — skipped"
-      else
-        echo "$fstab_entry" | sudo tee -a /etc/fstab > /dev/null
-        log_sub "fstab: $fstab_entry"
+        # Add fstab entry using the version that actually worked
+        local fstab_entry="${nfs_server}:${export_path} ${local_dir} nfs nfsvers=${try_ver},defaults,_netdev,nofail 0 0"
+        if grep -qsF "$local_dir" /etc/fstab; then
+          log_warn "fstab entry for ${local_dir} already exists — skipped"
+        else
+          echo "$fstab_entry" | sudo tee -a /etc/fstab > /dev/null
+          log_sub "fstab: $fstab_entry"
+        fi
+        return 0
       fi
-      return 0
-    fi
+    done
 
     log_error "Mount failed for ${nfs_server}:${export_path}"
-    prompt_yn "Retry with a different export path?" "Y"
+    prompt_yn "Retry with a different export path?" "Y" || true
     if [[ "${REPLY^^}" == "Y" ]]; then
       prompt_input "Correct export path" "$export_path"
       export_path="$REPLY"
-      [[ -n "$export_path" ]] || return 1
+      [[ -n "$export_path" ]] || break
     else
-      return 1
+      break
     fi
   done
+
+  # Mount never succeeded — remove the empty directory we created to avoid leaving stale dirs
+  if (( created_dir )); then
+    sudo rmdir "$local_dir" 2>/dev/null && log_sub "Removed empty directory: $local_dir"
+  fi
+  return 1
 }
 
 _mount_nfs() {
@@ -131,12 +146,12 @@ _mount_nfs() {
   local -a share_types=("movies" "tv" "music" "books" "audiobooks" "comics" "downloads" "custom name")
   local mounted_count=0
 
-  while IFS= read -r export_path; do
+  while IFS= read -r -u3 export_path; do
     [[ -z "$export_path" ]] && continue
     log_blank
     echo -e "  ${BOLD}Export:${RESET} ${CYAN}${nfs_server}:${export_path}${RESET}"
 
-    prompt_yn "Mount this share?" "Y"
+    prompt_yn "Mount this share?" "Y" || true
     [[ "${REPLY^^}" == "Y" ]] || { log_sub "Skipped"; continue; }
 
     # Ask what this share is for
@@ -155,12 +170,12 @@ _mount_nfs() {
     local local_dir="${mountpoint}/${folder_name}"
 
     if _mount_nfs_one "$nfs_server" "$export_path" "$local_dir" "$nfs_ver" "$user"; then
-      (( mounted_count++ ))
+      mounted_count=$(( mounted_count + 1 ))
     else
       log_warn "Skipped ${export_path} — could not mount"
     fi
 
-  done <<< "$exports_raw"
+  done 3<<< "$exports_raw"
 
   log_blank
   if (( mounted_count == 0 )); then
@@ -249,16 +264,42 @@ setup_data_dir() {
   local dir="$1"
   local user="$2"
   local dockerdir="$3"
+  local base="${dir%/}"   # strip trailing slash for consistent matching
 
-  if [[ -d "$dir" ]] && [[ -w "$dir" ]]; then
-    log_sub "$dir already exists and is writable — skipping mount setup"
+  # 1. Already accessible — nothing to do
+  if [[ -d "$base" ]] && [[ -w "$base" ]]; then
+    log_sub "$base already exists and is writable — skipping mount setup"
     return 0
   fi
 
-  log_warn "$dir does not exist or is not writable"
+  # 2. Check for existing NFS/SMB mounts at or under the directory.
+  #    This handles re-runs after a partial install, or cases where the user
+  #    manually mounted shares before running the installer.
+  local existing_mounts
+  existing_mounts=$(awk -v base="$base" '
+    ($3 == "nfs" || $3 == "nfs4" || $3 == "cifs") &&
+    ($2 == base || substr($2, 1, length(base)+1) == base "/") {
+      printf "  %-30s  %s  ←  %s\n", $2, $3, $1
+    }
+  ' /proc/mounts)
+
+  if [[ -n "$existing_mounts" ]]; then
+    log_info "Existing network mounts detected under ${base}:"
+    echo "$existing_mounts"
+    log_blank
+    prompt_yn "Are these all the mounts you need? (Yes to continue, No to add more)" "Y" || true
+    if [[ "${REPLY^^}" == "Y" ]]; then
+      log_ok "Using existing mounts — continuing"
+      return 0
+    fi
+    log_blank
+  fi
+
+  # 3. No usable mounts found (or user wants to add more) — offer setup options
+  log_warn "$base does not exist or is not writable"
   log_blank
 
-  prompt_select "How would you like to set up ${BOLD}${dir}${RESET}?" \
+  prompt_select "How would you like to set up ${BOLD}${base}${RESET}?" \
     "Create locally (sudo mkdir + chown)" \
     "Mount an NFS share" \
     "Mount an SMB/CIFS share" \
@@ -266,17 +307,17 @@ setup_data_dir() {
 
   case "$REPLY" in
     "Create locally (sudo mkdir + chown)")
-      _mount_sudo_create "$dir" "$user"
+      _mount_sudo_create "$base" "$user"
       ;;
     "Mount an NFS share")
-      _mount_nfs "$dir" "$user"
+      _mount_nfs "$base" "$user"
       ;;
     "Mount an SMB/CIFS share")
-      _mount_smb "$dir" "$user" "$dockerdir"
+      _mount_smb "$base" "$user" "$dockerdir"
       ;;
     "Skip — I will set it up manually")
       log_warn "Skipping data directory setup."
-      log_warn "Create ${dir} and ensure ${user} has write access before starting containers."
+      log_warn "Create ${base} and ensure ${user} has write access before starting containers."
       return 1
       ;;
   esac

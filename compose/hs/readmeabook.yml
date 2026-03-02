@@ -1,0 +1,26 @@
+services:
+  # ReadMeABook - Audiobook Automation (request + download + library management)
+  readmeabook:
+    image: ghcr.io/kikootwo/readmeabook:latest
+    container_name: readmeabook
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["media", "all"]
+    networks:
+      - default
+    ports:
+      - "$READMEABOOK_PORT:3030"
+    volumes:
+      - $DOCKERDIR/appdata/readmeabook/config:/app/config
+      - $DOCKERDIR/appdata/readmeabook/cache:/app/cache
+      - $DOCKERDIR/appdata/readmeabook/pgdata:/var/lib/postgresql/data
+      - $DOCKERDIR/appdata/readmeabook/redis:/var/lib/redis
+      - $DOWNLOADSDIR:/downloads
+      - $AUDIOBOOKS_DIR:/media
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+      # PUBLIC_URL: https://readmeabook.$DOMAINNAME_1   # required for OAuth
+    # DOCKER-LABELS-PLACEHOLDER

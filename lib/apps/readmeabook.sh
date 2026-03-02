@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# App catalog: ReadMeABook
+APP_NAME="readmeabook"
+APP_DESCRIPTION="Audiobook automation — request, download, and manage your audiobook library (Radarr/Sonarr + Overseerr for audiobooks)"
+APP_CATEGORY="media"
+APP_PORT_VAR="READMEABOOK_PORT"
+APP_DEFAULT_HOST_PORT="3030"
+APP_SERVICE_PORT="3030"
+APP_DEFAULT_SUBDOMAIN="readmeabook"
+APP_AUTH="none"
+APP_PROFILES="media,all"
+APP_IMAGE="ghcr.io/kikootwo/readmeabook:latest"
+APP_COMPOSE_FILE="compose/{HOSTNAME}/readmeabook.yml"
+APP_APPDATA_DIR="appdata/readmeabook"
+APP_REQUIRES_VOLUMES="appdata"
+APP_NOTES="ReadMeABook includes its own PostgreSQL and Redis. Set PUBLIC_URL to your external URL for OAuth to work. Integrates with Prowlarr, SABnzbd, qBittorrent, Plex, and Audiobookshelf."

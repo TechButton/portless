@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+# portless-answers.sh — Pre-fill install wizard answers
+# ──────────────────────────────────────────────────────
+#
+# Copy this file, fill in your values, and pass it to the installer:
+#
+#   cp portless-answers.sh.example portless-answers.sh
+#   ./install.sh --answers portless-answers.sh
+#
+# Or save it as "portless-answers.sh" in the same directory as install.sh
+# and it will be detected automatically.
+#
+# Leave any variable unset (comment it out or delete it) to be prompted
+# interactively for that question. You can pre-fill as many or as few
+# values as you like — the installer handles the rest.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Phase 2: Basic Configuration ─────────────────────────────────────────────
+
+# Server nickname — used in file/folder names (lowercase letters, digits, hyphens)
+#INSTALL_HOSTNAME="myserver"
+
+# Linux user that owns the Docker containers and appdata directories
+#INSTALL_USER="kyle"
+
+# Timezone identifier (run: timedatectl list-timezones | grep <region>)
+#INSTALL_TIMEZONE="America/New_York"
+
+# Directory where Docker config, secrets, and appdata are stored
+#INSTALL_DOCKERDIR="/home/kyle/docker"
+
+# Root directory where media files live (movies, TV shows, music, etc.)
+# This directory will be created if it doesn't already exist.
+#INSTALL_DATADIR="/mnt/data"
+
+# ── Phase 3: Domain & Network ─────────────────────────────────────────────────
+
+# Your domain name — must already be managed by Cloudflare (or your chosen DNS)
+#INSTALL_DOMAIN="example.com"
+
+# DNS provider used for automatic TLS certificates
+#   cloudflare  — automatic wildcard certs via Cloudflare DNS API (recommended)
+#   manual      — you manage DNS records and certs yourself
+#INSTALL_DNS_PROVIDER="cloudflare"
+
+# Cloudflare API token with Zone:DNS:Edit permission
+# Create one at: https://dash.cloudflare.com/profile/api-tokens
+# Use the "Edit zone DNS" template, scoped to your specific zone.
+#INSTALL_CF_TOKEN="your-cloudflare-api-token-here"
+
+# Cloudflare account email
+#INSTALL_CF_EMAIL="your@email.com"
+
+# This server's LAN IP address (auto-detected if not set)
+#INSTALL_SERVER_IP="192.168.1.100"
+
+# Traefik access mode
+#   hybrid  — LAN access on port 443 + remote access on port 444 via tunnel (recommended)
+#   local   — LAN access on port 443 only; add remote access later with ./manage.sh tunnel setup
+#INSTALL_TRAEFIK_MODE="hybrid"
+
+# Authentication system that protects all services
+#   tinyauth  — self-hosted SSO; one login covers all apps; optional 2FA (recommended)
+#   basic     — HTTP basic auth built into Traefik; no SSO; no extra container
+#   none      — no auth layer; only safe for LAN-only setups or apps with built-in login
+#INSTALL_AUTH_SYSTEM="tinyauth"
+
+# ── Phase 4: App Selection ────────────────────────────────────────────────────
+
+# Comma-separated list of apps to install.
+# Any app listed in lib/apps/ is valid. Some common examples:
+#
+#   Media servers:    plex jellyfin emby
+#   Arr stack:        sonarr radarr lidarr bazarr prowlarr
+#   Download clients: sabnzbd qbittorrent-vpn
+#   Management:       portainer vscode dozzle wud uptime-kuma it-tools
+#   Requests:         overseerr
+#   Other:            stirling-pdf maintainerr notifiarr tautulli
+#
+#INSTALL_APPS="plex,sonarr,radarr,prowlarr,sabnzbd,portainer,seerr,arrmate,readmeabook"
+
+# ── Phase 5: Remote Access ────────────────────────────────────────────────────
+
+# Remote access method.
+#
+#   cloudflare  — free, no VPS required, public URLs via Cloudflare Tunnel
+#   pangolin    — ~$18/year VPS, self-hosted, public URLs via Pangolin
+#   tailscale   — free, private WireGuard VPN, no public URLs
+#   headscale   — free, self-hosted Tailscale coordination server, VPS required
+#   netbird     — free, WireGuard mesh VPN, cloud or self-hosted
+#   none        — LAN access only; add remote access later
+#
+#INSTALL_TUNNEL="pangolin"
+
+# ── Phase 5a: Pangolin VPS Setup (only when INSTALL_TUNNEL=pangolin) ──────────
+
+# VPS public IP address
+#INSTALL_PANGOLIN_VPS_IP="1.2.3.4"
+
+# SSH port on the VPS (default 22)
+#INSTALL_PANGOLIN_SSH_PORT="22"
+
+# SSH authentication method: "key" or "password"
+#INSTALL_PANGOLIN_SSH_AUTH="key"
+
+# SSH username (usually "root" for a fresh VPS)
+#INSTALL_PANGOLIN_SSH_USER="root"
+
+# Path to SSH private key (if SSH_AUTH=key)
+#INSTALL_PANGOLIN_SSH_KEY="$HOME/.ssh/id_rsa"
+
+# SSH password (if SSH_AUTH=password — prefer key auth)
+#INSTALL_PANGOLIN_SSH_PASS=""
+
+# Create a non-root deploy user on the VPS? (Y/N)
+#INSTALL_PANGOLIN_CREATE_USER="Y"
+
+# Username for the non-root deploy user (if CREATE_USER=Y)
+#INSTALL_PANGOLIN_DEPLOY_USER="deploy"
+
+# Hostname for the Pangolin dashboard (DNS A record must point to VPS IP)
+#INSTALL_PANGOLIN_DOMAIN="pangolin.example.com"
+
+# Email for Let's Encrypt TLS certificate notifications
+#INSTALL_PANGOLIN_ACME_EMAIL="you@example.com"
+
+# Pangolin admin account email (for logging into the dashboard)
+#INSTALL_PANGOLIN_ADMIN_EMAIL="you@example.com"
+
+# Pangolin admin password (min 8 characters)
+#INSTALL_PANGOLIN_ADMIN_PASSWORD="changeme123"
+
+# Pangolin organization name (short slug, no spaces)
+#INSTALL_PANGOLIN_ORG="portless"
+
+# Pangolin site name (identifies this homeserver in the dashboard)
+#INSTALL_PANGOLIN_SITE="homeserver"
+
+# Copy an SSH public key to the VPS? (Y/N — only relevant if SSH_AUTH=password)
+#INSTALL_PANGOLIN_COPY_KEY="N"
+
+# ── Phase 6: Downloads ────────────────────────────────────────────────────────
+
+# Directory for download clients (SABnzbd, qBittorrent, etc.)
+# Defaults to $INSTALL_DATADIR/downloads if not set.
+#INSTALL_DOWNLOADSDIR="/mnt/data/downloads"

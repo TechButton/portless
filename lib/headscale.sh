@@ -8,8 +8,8 @@
 # VPS requirements: 1 vCPU · 512 MB RAM · public IP · domain pointing to it
 #
 
-[[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-HOMELAB_HEADSCALE_LOADED=1
+[[ -n "$PORTLESS_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+PORTLESS_HEADSCALE_LOADED=1
 
 # ─── SSH helpers ──────────────────────────────────────────────────────────────
 
@@ -183,7 +183,7 @@ headscale_wizard_existing() {
     ssh_auth="password"
   fi
 
-  prompt_input "Headscale username/namespace" "homelab"
+  prompt_input "Headscale username/namespace" "portless"
   local hs_username="$REPLY"
 
   state_set "

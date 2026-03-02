@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# lib/state.sh — Read/write .homelab-state.json via jq
+# lib/state.sh — Read/write .portless-state.json via jq
 
-[[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-HOMELAB_STATE_LOADED=1
+[[ -n "$PORTLESS_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+PORTLESS_STATE_LOADED=1
 
 # Default state file location (can be overridden)
-STATE_FILE="${DOCKERDIR:-$HOME/docker}/.homelab-state.json"
+STATE_FILE="${DOCKERDIR:-$HOME/docker}/.portless-state.json"
 
 # ─── Initialization ──────────────────────────────────────────────────────────────
 
 state_init() {
   local dockerdir="${1:-$HOME/docker}"
-  STATE_FILE="${dockerdir}/.homelab-state.json"
+  STATE_FILE="${dockerdir}/.portless-state.json"
 
   if [[ ! -f "$STATE_FILE" ]]; then
     log_sub "Initializing state file: $STATE_FILE"

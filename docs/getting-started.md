@@ -136,7 +136,7 @@ Portless asks about CrowdSec intrusion prevention **after** you pick your tunnel
 ```
 ~/docker/
 ├── .env                              # All config variables
-├── .homelab-state.json               # State tracking (don't delete this)
+├── .portless-state.json               # State tracking (don't delete this)
 ├── docker-compose-<hostname>.yml     # Your full stack
 ├── secrets/                          # Credential files (chmod 600)
 │   ├── cf_dns_api_token
@@ -208,7 +208,7 @@ These apps generate their own API keys internally. Look them up in each app's **
 | `BAZARR_API_KEY` | Bazarr | Settings → General → API Key |
 | `PLEX_TOKEN` | Plex | [support.plex.tv/articles/204059436](https://support.plex.tv/articles/204059436) |
 | `JELLYFIN_API_KEY` | Jellyfin | Dashboard → API Keys |
-| `OVERSEERR_API_KEY` | Overseerr | Settings → General → API Key |
+| `SEERR_API_KEY` | Seerr | Settings → General → API Key |
 | `TAUTULLI_API_KEY` | Tautulli | Settings → Web Interface → API Key |
 | `TMDB_API_KEY` | TMDB | [themoviedb.org/settings/api](https://www.themoviedb.org/settings/api) |
 
@@ -268,4 +268,5 @@ This runs the full tunnel wizard and updates your running stack.
 - [Remote Access Guide](remote-access.md) — detailed comparison of all five methods
 - [Pangolin Guide](pangolin-guide.md) — VPS setup, DNS config, troubleshooting
 - [Adding Apps](adding-apps.md) — add apps not in the default catalog
+- [Migrating from another server](migrating.md) — transfer appdata, media, and config to a new machine
 - [Troubleshooting](troubleshooting.md)

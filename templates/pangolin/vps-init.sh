@@ -15,7 +15,7 @@
 #   8. Sets correct timezone
 #   9. Prints VPS_INIT_DONE on success
 #
-# Usage: bash /tmp/homelab-vps-init.sh
+# Usage: bash /tmp/portless-vps-init.sh
 #
 # Environment variables (optional):
 #   VPS_SSH_PORT   — SSH port to allow in firewall (default: 22)
@@ -154,12 +154,12 @@ if [[ "${SKIP_UFW}" != "1" ]]; then
   info "Allowed SSH on port ${SSH_CFG_PORT}"
 
   # Pangolin / Traefik
-  $SUDO ufw allow 80/tcp  comment 'HTTP (Let'\''s Encrypt)' > /dev/null
-  $SUDO ufw allow 443/tcp comment 'HTTPS (Pangolin)'        > /dev/null
+  $SUDO ufw allow 80/tcp  comment 'HTTP' > /dev/null
+  $SUDO ufw allow 443/tcp comment 'HTTPS Pangolin' > /dev/null
 
   # Gerbil WireGuard tunnel
-  $SUDO ufw allow 51820/udp comment 'WireGuard (Gerbil)'   > /dev/null
-  $SUDO ufw allow 51821/udp comment 'WireGuard (Gerbil 2)'  > /dev/null
+  $SUDO ufw allow 51820/udp comment 'WireGuard Gerbil' > /dev/null
+  $SUDO ufw allow 51821/udp comment 'WireGuard Gerbil 2' > /dev/null
 
   # Enable
   $SUDO ufw --force enable > /dev/null

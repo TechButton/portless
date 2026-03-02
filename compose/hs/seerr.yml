@@ -1,0 +1,20 @@
+services:
+  # Seerr - Media Request Management (Overseerr replacement)
+  seerr:
+    image: seerr/seerr:latest
+    container_name: seerr
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    profiles: ["requests", "all"]
+    networks:
+      - default
+    ports:
+      - "$SEERR_PORT:5055"
+    volumes:
+      - $DOCKERDIR/appdata/seerr:/app/config
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    # DOCKER-LABELS-PLACEHOLDER

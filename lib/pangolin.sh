@@ -13,6 +13,7 @@ REPAIR_DB_SCRIPT="${REPO_ROOT}/templates/pangolin/repair_pangolin_db.cjs"
 DIAGNOSE_SCRIPT="${REPO_ROOT}/templates/pangolin/diagnose_pangolin.cjs"
 FIX_404_SCRIPT="${REPO_ROOT}/templates/pangolin/fix_404.cjs"
 SET_AUTH_SCRIPT="${REPO_ROOT}/templates/pangolin/set_resource_auth.cjs"
+FIX_PANGOLIN_SCRIPT="${REPO_ROOT}/templates/pangolin/fix_pangolin.cjs"
 VPS_INIT_SCRIPT="${REPO_ROOT}/templates/pangolin/vps-init.sh"
 PANGOLIN_COMPOSE_TMPL="${REPO_ROOT}/templates/pangolin/pangolin-compose.yml.tmpl"
 PANGOLIN_CONFIG_TMPL="${REPO_ROOT}/templates/pangolin/pangolin-config.yml.tmpl"
@@ -867,11 +868,11 @@ pangolin_wizard_fresh() {
   echo ""
 
   # ── VPS connection details ──────────────────────────────────────────────────
-  prompt_input "VPS public IP address" ""
+  ans_prompt_input "PANGOLIN_VPS_IP" "VPS public IP address" ""
   local vps_ip="$REPLY"
   validate_ip "$vps_ip" || die "Invalid IP address: $vps_ip"
 
-  prompt_input "SSH port" "22"
+  ans_prompt_input "PANGOLIN_SSH_PORT" "SSH port" "22"
   local ssh_port="$REPLY"
 
   _pang_prompt_ssh_credentials
@@ -898,8 +899,8 @@ pangolin_wizard_fresh() {
     echo ""
     log_warn "You are connected as root. Running services as root is a security risk."
     log_info "Best practice: create a dedicated sudo user for all operations."
-    if prompt_yn "Create a non-root sudo user on the VPS now?" "Y"; then
-      prompt_input "New username" "deploy"
+    if ans_prompt_yn "PANGOLIN_CREATE_USER" "Create a non-root sudo user on the VPS now?" "Y"; then
+      ans_prompt_input "PANGOLIN_DEPLOY_USER" "New username" "deploy"
       local new_vps_user="$REPLY"
       new_vps_user="${new_vps_user//[^a-z0-9_-]/}"   # sanitize
       [[ -n "$new_vps_user" ]] || new_vps_user="deploy"
@@ -949,10 +950,10 @@ USERADD_SCRIPT
   local domain
   domain=$(state_get '.domain')
 
-  prompt_input "Hostname for Pangolin dashboard (DNS must point to VPS)" "pangolin.${domain}"
+  ans_prompt_input "PANGOLIN_DOMAIN" "Hostname for Pangolin dashboard (DNS must point to VPS)" "pangolin.${domain}"
   local pangolin_domain="$REPLY"
 
-  prompt_input "Email for Let's Encrypt TLS certificates" ""
+  ans_prompt_input "PANGOLIN_ACME_EMAIL" "Email for Let's Encrypt TLS certificates" ""
   local acme_email="$REPLY"
   [[ -n "$acme_email" ]] || die "ACME email is required for TLS certificates"
 
@@ -977,19 +978,19 @@ USERADD_SCRIPT
   # ── Admin credentials for Pangolin dashboard ────────────────────────────────
   echo ""
   log_info "These credentials will be used to log into the Pangolin dashboard."
-  prompt_input "Pangolin admin email" "$acme_email"
+  ans_prompt_input "PANGOLIN_ADMIN_EMAIL" "Pangolin admin email" "$acme_email"
   local admin_email="$REPLY"
-  prompt_secret "Pangolin admin password (min 8 chars)"
+  ans_prompt_secret "PANGOLIN_ADMIN_PASSWORD" "Pangolin admin password (min 8 chars)"
   local admin_password="$REPLY"
   [[ ${#admin_password} -ge 8 ]] || die "Password must be at least 8 characters"
 
   # ── Organization and site names ─────────────────────────────────────────────
-  prompt_input "Organization name (short, no spaces)" "portless"
+  ans_prompt_input "PANGOLIN_ORG" "Organization name (short, no spaces)" "portless"
   local org_name="$REPLY"
 
   local hostname
   hostname=$(state_get '.hostname')
-  prompt_input "Site name (your server name)" "${hostname:-homeserver}"
+  ans_prompt_input "PANGOLIN_SITE" "Site name (your server name)" "${hostname:-homeserver}"
   local site_name="$REPLY"
 
   PANGOLIN_VPS_HOST="$vps_ip"
@@ -998,8 +999,8 @@ USERADD_SCRIPT
   if [[ "$ssh_auth" == "password" ]]; then
     echo ""
     log_info "You're connecting via password. SSH keys are more secure."
-    if prompt_yn "Copy an SSH key to the VPS for future access?" "Y"; then
-      prompt_input "Path to SSH public key" "$HOME/.ssh/id_rsa.pub"
+    if ans_prompt_yn "PANGOLIN_COPY_KEY" "Copy an SSH key to the VPS for future access?" "Y"; then
+      ans_prompt_input "PANGOLIN_PUBKEY_PATH" "Path to SSH public key" "$HOME/.ssh/id_rsa.pub"
       pangolin_copy_ssh_key "$REPLY"
     fi
   fi
@@ -1115,6 +1116,22 @@ EOF
 # ─── Prompt for SSH credentials (sets PANGOLIN_SSH_* globals) ─────────────────
 
 _pang_prompt_ssh_credentials() {
+  # Headless mode: INSTALL_PANGOLIN_SSH_AUTH set via answers file
+  if [[ -n "${INSTALL_PANGOLIN_SSH_AUTH:-}" ]]; then
+    PANGOLIN_SSH_AUTH="${INSTALL_PANGOLIN_SSH_AUTH}"
+    PANGOLIN_SSH_USER="${INSTALL_PANGOLIN_SSH_USER:-root}"
+    if [[ "$PANGOLIN_SSH_AUTH" == "key" ]]; then
+      PANGOLIN_SSH_KEY="${INSTALL_PANGOLIN_SSH_KEY:-$HOME/.ssh/id_rsa}"
+      PANGOLIN_SSH_PASS=""
+      log_sub "SSH auth: key (${PANGOLIN_SSH_KEY})  (answers file)"
+    else
+      PANGOLIN_SSH_PASS="${INSTALL_PANGOLIN_SSH_PASS:-}"
+      PANGOLIN_SSH_KEY=""
+      log_sub "SSH auth: password  (answers file)"
+    fi
+    return 0
+  fi
+
   prompt_select "SSH authentication method:" \
     "SSH key (recommended)" \
     "Username and password"
@@ -1372,6 +1389,63 @@ pangolin_fix_404() {
     log_sub "Restarting Pangolin to pick up changes..."
     pangolin_restart
     log_ok "Done — try accessing your apps again"
+  fi
+}
+
+# ─── Comprehensive fix (UI redirect loop, 404s, domains, roleResources) ────────
+#
+# pangolin_fix_all [--dry-run]
+#
+# Runs fix_pangolin.cjs which applies all fixes in one pass:
+#   - isShareableSite=0 (stops the UI /resources/proxy redirect loop)
+#   - enableProxy=1, enabled=1, targets.method=http
+#   - domains table creation and linking
+#   - roleResources admin grants
+#
+pangolin_fix_all() {
+  local dry_run="${1:-}"
+  local extra_arg=""
+  [[ "$dry_run" == "--dry-run" ]] && extra_arg="--dry-run"
+
+  _pang_init_ssh_from_state
+
+  [[ -f "$FIX_PANGOLIN_SCRIPT" ]] || { log_warn "fix_pangolin.cjs not found"; return 1; }
+
+  log_step "Running comprehensive Pangolin fix${extra_arg:+ (dry run)}"
+
+  _pang_scp_to "$FIX_PANGOLIN_SCRIPT" "/tmp/fix_pangolin.cjs" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}" 2>&1 \
+    || { log_warn "Could not upload fix_pangolin script"; return 1; }
+
+  local output
+  output=$(_pang_ssh \
+    "sudo docker cp /tmp/fix_pangolin.cjs pangolin:/app/fix_pangolin.cjs && \
+     sudo docker exec pangolin node /app/fix_pangolin.cjs ${extra_arg} 2>&1; \
+     sudo docker exec pangolin rm -f /app/fix_pangolin.cjs; \
+     rm -f /tmp/fix_pangolin.cjs" 2>/dev/null) || true
+
+  echo "$output" >> "${LOG_FILE:-/tmp/portless-install.log}"
+
+  while IFS= read -r line; do
+    case "$line" in
+      "FIXED "*)       log_ok   "${line#FIXED }" ;;
+      "OK "*)          log_sub  "${line#OK }" ;;
+      WARNING:*)       log_warn "${line#WARNING: }" ;;
+      "DRY RUN"*)      log_info "$line" ;;
+      FIX_COMPLETE*)
+        local changes
+        changes=$(echo "$line" | grep -o 'changes=[0-9]*' | cut -d= -f2)
+        [[ "$changes" -gt 0 ]] && log_ok "Applied ${changes} fix(es)" || log_ok "No changes needed"
+        ;;
+      "")              ;;
+      *)               log_sub "$line" ;;
+    esac
+  done <<< "$output"
+
+  if [[ -z "$dry_run" ]]; then
+    log_sub "Restarting Pangolin to pick up changes..."
+    pangolin_restart
+    log_ok "Done — reload https://pangolin.${_domain:-yourdomain} in your browser"
   fi
 }
 

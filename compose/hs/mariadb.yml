@@ -20,7 +20,7 @@ services:
       PUID: $PUID
       PGID: $PGID
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-changeme123}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-homelab}
-      MYSQL_USER: ${MYSQL_USER:-homelab}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-portless}
+      MYSQL_USER: ${MYSQL_USER:-portless}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-changeme123}
     # DOCKER-LABELS-PLACEHOLDER

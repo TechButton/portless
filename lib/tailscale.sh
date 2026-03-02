@@ -6,8 +6,8 @@
 # Optional subnet routing exposes Docker networks to all Tailscale peers.
 #
 
-[[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-HOMELAB_TAILSCALE_LOADED=1
+[[ -n "$PORTLESS_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+PORTLESS_TAILSCALE_LOADED=1
 
 # ─── Wizard ───────────────────────────────────────────────────────────────────
 
@@ -36,7 +36,7 @@ EOF
   [[ -n "$ts_auth_key" ]] || die "Tailscale auth key is required"
 
   local default_hostname
-  default_hostname=$(hostname -s 2>/dev/null || echo "homelab")
+  default_hostname=$(hostname -s 2>/dev/null || echo "portless")
   prompt_input "Device hostname in Tailscale admin console" "$default_hostname"
   local ts_hostname="$REPLY"
 

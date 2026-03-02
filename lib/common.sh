@@ -4,15 +4,15 @@
 
 # ─── Terminal colors ────────────────────────────────────────────────────────────
 if [[ -t 1 ]]; then
-  RED='\033[0;31m'
-  YELLOW='\033[1;33m'
-  GREEN='\033[0;32m'
-  CYAN='\033[0;36m'
-  BLUE='\033[0;34m'
-  MAGENTA='\033[0;35m'
-  BOLD='\033[1m'
-  DIM='\033[2m'
-  RESET='\033[0m'
+  RED=$'\033[0;31m'
+  YELLOW=$'\033[1;33m'
+  GREEN=$'\033[0;32m'
+  CYAN=$'\033[0;36m'
+  BLUE=$'\033[0;34m'
+  MAGENTA=$'\033[0;35m'
+  BOLD=$'\033[1m'
+  DIM=$'\033[2m'
+  RESET=$'\033[0m'
 else
   RED='' YELLOW='' GREEN='' CYAN='' BLUE='' MAGENTA='' BOLD='' DIM='' RESET=''
 fi
@@ -162,6 +162,66 @@ prompt_checklist() {
       SELECTED_ITEMS+=("${options[$((num - 1))]}")
     fi
   done
+}
+
+# ─── Answers-file aware prompt helpers ───────────────────────────────────────────
+#
+# Each function checks INSTALL_<KEY> first. If the variable is set (from an
+# answers file sourced at startup), the value is used automatically and a brief
+# log line is printed. Otherwise the normal interactive prompt runs.
+# Result is always in $REPLY, matching the underlying prompt_ functions.
+
+ans_prompt_input() {
+  local _key="INSTALL_${1}"
+  if [[ -n "${!_key:-}" ]]; then
+    REPLY="${!_key}"
+    log_sub "$2: ${REPLY}  ${DIM}(answers file)${RESET}"
+  else
+    prompt_input "$2" "${3:-}"
+  fi
+}
+
+ans_prompt_secret() {
+  local _key="INSTALL_${1}"
+  if [[ -n "${!_key:-}" ]]; then
+    REPLY="${!_key}"
+    log_sub "$2: ***  ${DIM}(answers file)${RESET}"
+  else
+    prompt_secret "$2"
+  fi
+}
+
+ans_prompt_yn() {
+  local _key="INSTALL_${1}"
+  local _prompt="$2"
+  local _default="${3:-N}"
+  if [[ -n "${!_key:-}" ]]; then
+    REPLY="${!_key}"
+    log_sub "${_prompt}: ${REPLY}  ${DIM}(answers file)${RESET}"
+    if [[ "${REPLY^^}" == "Y" ]]; then return 0; else return 1; fi
+  fi
+  prompt_yn "$_prompt" "$_default"
+}
+
+# ans_prompt_select <ANSWER_KEY> <prompt> [options...]
+# Matches INSTALL_<KEY> against options using case-insensitive prefix match.
+# Falls back to interactive prompt if no match is found.
+ans_prompt_select() {
+  local _key="INSTALL_${1}"
+  local _prompt="$2"; shift 2
+  if [[ -n "${!_key:-}" ]]; then
+    local _val="${!_key,,}"
+    local _opt
+    for _opt in "$@"; do
+      if [[ "${_opt,,}" =~ ^${_val} ]]; then
+        REPLY="$_opt"
+        log_sub "${_prompt}: ${REPLY}  ${DIM}(answers file)${RESET}"
+        return 0
+      fi
+    done
+    log_warn "INSTALL_${1}='${!_key}' did not match any option — prompting interactively"
+  fi
+  prompt_select "$_prompt" "$@"
 }
 
 # ─── Validation helpers ──────────────────────────────────────────────────────────

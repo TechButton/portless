@@ -349,26 +349,26 @@ ssh user@vps "ufw status"
 
 ### State file is corrupted
 
-The state file is JSON at `~/docker/.homelab-state.json`. If corrupted:
+The state file is JSON at `~/docker/.portless-state.json`. If corrupted:
 
 ```bash
 # Check if it's valid JSON
-jq '.' ~/docker/.homelab-state.json
+jq '.' ~/docker/.portless-state.json
 
 # If not, restore from backup (install.sh creates .bak files)
-ls ~/docker/.homelab-state.json.bak.*
-cp ~/docker/.homelab-state.json.bak.<timestamp> ~/docker/.homelab-state.json
+ls ~/docker/.portless-state.json.bak.*
+cp ~/docker/.portless-state.json.bak.<timestamp> ~/docker/.portless-state.json
 ```
 
 ### Manually edit state
 
 ```bash
 # View current state
-cat ~/docker/.homelab-state.json | jq '.'
+cat ~/docker/.portless-state.json | jq '.'
 
 # Update a value
-jq '.domain = "newdomain.com"' ~/docker/.homelab-state.json > /tmp/state.tmp
-mv /tmp/state.tmp ~/docker/.homelab-state.json
+jq '.domain = "newdomain.com"' ~/docker/.portless-state.json > /tmp/state.tmp
+mv /tmp/state.tmp ~/docker/.portless-state.json
 ```
 
 ## Getting Help
@@ -381,4 +381,4 @@ When reporting an issue, include:
 - OS and version: `cat /etc/os-release`
 - Docker version: `docker --version && docker compose version`
 - The error message + relevant logs
-- Your `.homelab-state.json` (redact sensitive values)
+- Your `.portless-state.json` (redact sensitive values)

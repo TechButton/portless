@@ -11,8 +11,8 @@
 # Self-hosted VPS requirements: 1 vCPU · 1 GB RAM · public IP · domain
 #
 
-[[ -n "$HOMELAB_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
-HOMELAB_NETBIRD_LOADED=1
+[[ -n "$PORTLESS_COMMON_LOADED" ]] || source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
+PORTLESS_NETBIRD_LOADED=1
 
 # ─── SSH helpers ──────────────────────────────────────────────────────────────
 
