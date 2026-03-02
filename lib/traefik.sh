@@ -786,11 +786,11 @@ tinyauth_setup_user() {
       || die "Could not install apache2-utils. Run: sudo apt-get install apache2-utils"
   fi
 
-  prompt_input "TinyAuth admin email" ""
+  ans_prompt_input "TINYAUTH_EMAIL" "TinyAuth admin email" ""
   local ta_email="$REPLY"
   [[ -n "$ta_email" ]] || die "Email is required"
 
-  prompt_secret "TinyAuth admin password (min 8 chars)"
+  ans_prompt_secret "TINYAUTH_PASSWORD" "TinyAuth admin password (min 8 chars)"
   local ta_pass="$REPLY"
   [[ ${#ta_pass} -ge 8 ]] || die "Password must be at least 8 characters"
 
