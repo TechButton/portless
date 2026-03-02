@@ -506,13 +506,17 @@ phase1_system_check() {
     fi
   else
     log_warn "Docker is not installed."
-    if prompt_yn "Install Docker now?" "Y"; then
+    if ans_prompt_yn "DOCKER" "Install Docker now?" "Y"; then
       install_docker
       if [[ "${DOCKER_GROUP_ADDED:-0}" == "1" ]]; then
-        echo ""
-        log_warn "Please log out and back in for Docker group changes to take effect."
-        log_warn "Then re-run this script."
-        exit 0
+        # Re-exec under docker group so the rest of the install continues without
+        # requiring a log-out. Works both interactively and with an answers file.
+        local _abs_answers="${ANSWERS_FILE:-}"
+        if [[ -n "$_abs_answers" && "$_abs_answers" != /* ]]; then
+          _abs_answers="$(realpath "$_abs_answers" 2>/dev/null || echo "$_abs_answers")"
+        fi
+        log_info "Restarting with docker group active..."
+        exec sg docker -c "bash \"${SCRIPT_DIR}/install.sh\"${_abs_answers:+ --answers \"${_abs_answers}\"}"
       fi
     else
       die "Docker is required. Install it manually: https://docs.docker.com/engine/install/"
