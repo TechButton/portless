@@ -44,16 +44,37 @@ _require_app_installed() {
   app_is_installed "$app" || die "App '$app' is not installed. Run: ./manage.sh add $app"
 }
 
-# Strip 'profiles:' lines from compose file so all included services start
-# without needing --profile flags. Safe to run multiple times (idempotent).
-_migrate_compose_strip_profiles() {
+# Ensure compose file contains all apps marked installed in state.
+# If any are missing, regenerate the compose file from state.
+# Also strips legacy 'profiles:' lines so services start without --profile.
+_ensure_compose_current() {
   local compose_file
   compose_file=$(_compose_file 2>/dev/null) || return 0
   [[ -f "$compose_file" ]] || return 0
+
+  # Strip legacy profiles lines (idempotent)
   if grep -q "^[[:space:]]*profiles:" "$compose_file" 2>/dev/null; then
-    log_sub "Removing docker compose profiles from $(basename "$compose_file") (one-time migration)..."
+    log_sub "Stripping legacy compose profiles (one-time migration)..."
     sed -i '/^[[:space:]]*profiles:/d' "$compose_file"
-    log_ok "Profiles removed — all selected services will now start automatically"
+  fi
+
+  # Check whether all installed apps have a service entry in the compose file
+  local missing=()
+  local apps
+  apps=$(app_list_installed 2>/dev/null) || return 0
+  while IFS= read -r app; do
+    [[ -z "$app" ]] && continue
+    # Each app snippet adds a "container_name: <app>" line
+    if ! grep -qE "container_name:[[:space:]]+${app}$" "$compose_file" 2>/dev/null; then
+      missing+=("$app")
+    fi
+  done <<< "$apps"
+
+  if [[ "${#missing[@]}" -gt 0 ]]; then
+    log_warn "Installed apps missing from compose file: ${missing[*]}"
+    log_sub "Regenerating compose file to include all installed apps..."
+    _cmd_regen_compose
+    log_ok "Compose file updated"
   fi
 }
 
@@ -196,7 +217,7 @@ cmd_remove() {
 cmd_update() {
   local target="${1:-}"
   log_step "Updating: ${target:-all services}"
-  _migrate_compose_strip_profiles
+  _ensure_compose_current
 
   if [[ -n "$target" ]]; then
     _require_app_installed "$target"
