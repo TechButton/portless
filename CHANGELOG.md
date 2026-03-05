@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.6] — 2026-03-05
+
+### Security — `setup_pangolin.cjs` audit and hardening
+
+- **Path traversal fix** — `cfgPath` (from `process.argv[2]`) is now resolved with `path.resolve()` and rejected unless it starts with `/tmp/`. This prevents arbitrary file reads and deletes if the argument is attacker-controlled.
+- **SQL injection hardening** — `getColumns()` now validates `tableName` against an explicit `ALLOWED_TABLES` allowlist before issuing the `PRAGMA table_info(...)` query. Dynamic column names in INSERT statements are documented as derived from hardcoded ternary pairs with no user input path.
+- **`newtSecret` plaintext exposure** — Removed `newt_secret=…` from the `SETUP_RESULT` stdout line; the secret no longer appears in Docker logs or the install log file. `pangolin.sh` now assigns `NEWT_SECRET` from its local variable instead of parsing it back from output. The log write in `pangolin.sh` is also piped through `sed` to redact `admin_password` and `newt_secret`.
+- **Input validation** — All eight config fields (`email`, `password`, `setupToken`, `orgId`, `orgName`, `siteName`, `newtId`, `newtSecret`) are validated for presence, string type, max length, and email format before any database operations begin.
+
+---
+
 ## [0.8.5] — 2026-03-02
 
 ### Fixed — Pangolin dashboard empty (critical)

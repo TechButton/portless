@@ -17,11 +17,18 @@
 "use strict";
 
 const fs     = require("fs");
+const path   = require("path");
 const crypto = require("crypto");
 
 // ─── Config ────────────────────────────────────────────────────────────────────
 
-const cfgPath = process.argv[2] || "/tmp/pangolin-setup-config.json";
+// Resolve and constrain config path to /tmp to prevent path traversal.
+const cfgPath = path.resolve(process.argv[2] || "/tmp/pangolin-setup-config.json");
+if (!cfgPath.startsWith("/tmp/")) {
+  process.stderr.write(`FAIL Config path must be within /tmp, got: ${cfgPath}\n`);
+  process.exit(1);
+}
+
 let cfg;
 try {
   cfg = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
@@ -32,12 +39,49 @@ try {
 
 const { email, password, setupToken, orgId, orgName, siteName, newtId, newtSecret } = cfg;
 
+// ─── Input validation ──────────────────────────────────────────────────────────
+
+function assertField(name, value, maxLen = 256) {
+  if (typeof value !== "string" || value.trim() === "") {
+    process.stderr.write(`FAIL Config field '${name}' is missing or empty\n`);
+    process.exit(1);
+  }
+  if (value.length > maxLen) {
+    process.stderr.write(`FAIL Config field '${name}' exceeds max length (${maxLen})\n`);
+    process.exit(1);
+  }
+}
+
+assertField("email",       email);
+assertField("password",    password);
+assertField("setupToken",  setupToken);
+assertField("orgId",       orgId,       64);
+assertField("orgName",     orgName,     128);
+assertField("siteName",    siteName,    128);
+assertField("newtId",      newtId,      128);
+assertField("newtSecret",  newtSecret);
+
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  process.stderr.write(`FAIL Config field 'email' is not a valid email address\n`);
+  process.exit(1);
+}
+
 const DB_PATH = "/app/config/db/db.sqlite";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
+// SQLite PRAGMA does not support parameterized table names, so we use an allowlist.
+const ALLOWED_TABLES = new Set([
+  "user", "users", "orgs", "newt", "roles",
+  "roleActions", "userActions", "actions",
+  "userOrgs", "userSites", "roleSites", "sites", "setupTokens",
+]);
+
 // Return column names for a table
 function getColumns(db, tableName) {
+  if (!ALLOWED_TABLES.has(tableName)) {
+    throw new Error(`getColumns: disallowed table name '${tableName}'`);
+  }
   return db.prepare(`PRAGMA table_info('${tableName}')`).all().map(r => r.name);
 }
 
@@ -116,15 +160,22 @@ async function main() {
   // ── Step 4: Insert admin user ─────────────────────────────────────────────────
   // user table PK: 'id' in EE, 'userId' in older CE — introspect to find it
   // NOTE: FK columns in userOrgs/userSites are always 'userId' regardless of PK name
+  //
+  // Column names below are interpolated into SQL, but every value is the result of an
+  // Array.includes() ternary between two hardcoded string literals — no user input can
+  // flow into these positions.
   const userPkCol      = userCols.includes("id")           ? "id"           : "userId";
   const passwordCol    = userCols.includes("passwordHash")  ? "passwordHash"  : "password";
   const serverAdminCol = userCols.includes("serverAdmin")   ? "serverAdmin"   : "isServerAdmin";
   const emailVerCol    = userCols.includes("emailVerified") ? "emailVerified" : "emailVerified";
 
   const username = email.split("@")[0];
-  // Include termsAcceptedTimestamp if column exists (required for dashboard access in Pangolin EE)
-  const termsCol = userCols.includes("termsAcceptedTimestamp") ? ", termsAcceptedTimestamp" : "";
-  const termsVal = userCols.includes("termsAcceptedTimestamp") ? `, ${Date.now()}` : "";
+  // Include termsAcceptedTimestamp if column exists (required for dashboard access in Pangolin EE).
+  // The value is Math.floor(Date.now()) — a JavaScript integer, never user-supplied input.
+  const hasTerms = userCols.includes("termsAcceptedTimestamp");
+  const termsCol = hasTerms ? ", termsAcceptedTimestamp" : "";
+  const termsNow = Math.floor(Date.now()); // integer — safe to interpolate
+  const termsVal = hasTerms ? `, ${termsNow}` : "";
   db.prepare(`
     INSERT INTO ${userTable}
       (${userPkCol}, email, username, name, type, ${passwordCol},
@@ -245,8 +296,10 @@ async function main() {
 
   try { fs.unlinkSync(cfgPath); } catch (_) {}
 
+  // newtSecret is intentionally omitted — the caller supplied it and already holds it.
+  // Echoing it here would expose it in docker logs and the install log file.
   process.stdout.write(
-    `SETUP_RESULT org_id=${orgId} site_id=${siteId} role_id=${roleId} newt_id=${newtId} newt_secret=${newtSecret}\n`
+    `SETUP_RESULT org_id=${orgId} site_id=${siteId} role_id=${roleId} newt_id=${newtId}\n`
   );
 }
 

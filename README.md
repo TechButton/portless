@@ -2,7 +2,7 @@
 
 An interactive setup wizard and management CLI for a self-hosted media stack. No port forwarding, no exposed home IP, no router changes required.
 
-[![Version](https://img.shields.io/badge/version-0.8.5-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.6-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/techbutton)
 
@@ -46,6 +46,15 @@ All methods avoid port forwarding and work with CGNAT. Your home IP is never exp
 ---
 
 ## Security
+
+### Code Security
+
+`setup_pangolin.cjs` was audited and patched in v0.8.6:
+
+- **Path traversal** — config file path is now resolved and constrained to `/tmp/`
+- **SQL injection hardening** — `getColumns()` uses an explicit table-name allowlist; all dynamic column names are derived from hardcoded ternary pairs with no user input in the SQL-building path
+- **Secret exposure** — `newtSecret` is no longer echoed to stdout or written to the install log; secrets are redacted in the log via `sed` in `pangolin.sh`
+- **Input validation** — all config fields are validated for presence, type, length, and email format before any database operations
 
 ### Authentication
 Every service is protected by a single login — pick one during setup:

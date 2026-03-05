@@ -471,7 +471,11 @@ pangolin_setup_admin_and_site() {
     "sudo docker exec pangolin node /app/pangolin-setup.cjs /tmp/pangolin-cfg.json 2>&1" \
     2>/dev/null) || true
 
-  echo "$api_result" >> "${LOG_FILE:-/tmp/portless-install.log}"
+  # Redact any accidental secret echoes before writing to log
+  echo "$api_result" | sed \
+    -e "s/${admin_password//\//\\/}/[REDACTED]/g" \
+    -e "s/${newt_secret//\//\\/}/[REDACTED]/g" \
+    >> "${LOG_FILE:-/tmp/portless-install.log}"
 
   # Clean up
   _pang_ssh \
@@ -486,7 +490,8 @@ pangolin_setup_admin_and_site() {
     PANGOLIN_SITE_ID=$(echo "$result_line" | grep -o 'site_id=[^ ]*'   | cut -d= -f2)
     PANGOLIN_ROLE_ID=$(echo "$result_line" | grep -o 'role_id=[^ ]*'   | cut -d= -f2)
     NEWT_ID=$(echo "$result_line"          | grep -o 'newt_id=[^ ]*'   | cut -d= -f2)
-    NEWT_SECRET=$(echo "$result_line"      | grep -o 'newt_secret=[^ ]*' | cut -d= -f2)
+    # newtSecret is not echoed by the setup script — use the locally held value directly
+    NEWT_SECRET="$newt_secret"
     log_ok "Pangolin configured: org=${PANGOLIN_ORG_ID} site=${PANGOLIN_SITE_ID} role=${PANGOLIN_ROLE_ID:-?}"
 
     # Run the repair script immediately after setup to ensure all access tables are correct
