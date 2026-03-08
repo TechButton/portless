@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.8.11] — 2026-03-07
+
+### Security — SDL + STRIDE/PASTA threat-model review
+
+Full Security Development Lifecycle audit followed by STRIDE and PASTA threat modelling. 19 findings resolved across 7 files.
+
+#### SDL findings (11)
+
+- **`lib/state.sh` — jq key injection** — `state_set_num()` and `state_set_bool()` now validate the key argument against `^[a-zA-Z0-9._]+$` before interpolating it into a jq filter string. Unsanitised keys could have escaped the jq expression.
+- **`lib/state.sh` — port range exhaustion** — `pangolin_next_port()` now emits a warning at port ≥ 65500 and dies at ≥ 65535, preventing silent wrap-around or invalid port allocation.
+- **`lib/state.sh` — state file permissions** — `state_init()` now runs `chmod 600` on the state file immediately after creation so credentials stored there are not world-readable before the first write.
+- **`lib/common.sh` — log file permissions** — `_log_to_file()` creates the log file with `install -m 600 /dev/null` on first write, preventing a window where the file is world-readable.
+- **`lib/cloudflare.sh` — `noTLSVerify: true`** — `cf_configure_tunnel_wildcard()` had `"noTLSVerify": true` in the Cloudflare ingress config. Changed to `false` so origin TLS is always verified.
+- **`lib/cloudflare.sh` — tunnel token in compose env** — `TUNNEL_TOKEN` was written inline in the docker-compose `environment:` block (visible via `docker inspect`). Now written to `secrets/cloudflared.env` (chmod 600) and referenced via `env_file:`.
+- **`lib/pangolin.sh` — SSH host key TOFU** — all three SSH init functions (`_pang_init_connection`, `_nb_init_ssh`, `_hs_init_connection`) now emit an explicit warning when `StrictHostKeyChecking=accept-new` is active so operators know the first connection is TOFU and can verify fingerprints manually.
+- **`lib/pangolin.sh` — sed log redaction metacharacter injection** — log redaction of `admin_password` and `newt_secret` used raw string interpolation in `sed`. Added `_pang_sed_escape()` to escape all sed metacharacters before substitution.
+- **`lib/pangolin.sh` — org ID shell injection** — `PANGOLIN_ORG_ID` is interpolated into SSH remote commands. Both entry points (`_pang_prompt_manual_credentials`, `pangolin_wizard_existing`) now validate the value against `^[a-z0-9][a-z0-9_-]*$` before use.
+- **`lib/pangolin.sh` — resource ID injection** — `pangolin_remove_resource()` validates `resource_id` against `^[0-9]+$` before passing it to the API.
+- **`lib/pangolin.sh` — SSH authorized_keys command injection** — `pangolin_copy_ssh_key()` piped the public key content via a variable expansion into a remote command. Replaced with `printf '%s\n' "$pub_key_content" | _pang_ssh "cat >> ~/.ssh/authorized_keys"` so the key value never touches the remote shell command line.
+
+#### STRIDE / PASTA findings (8)
+
+- **`lib/pangolin.sh` — `AllowTcpForwarding yes`** (Elevation of Privilege) — SSH hardening block changed to `AllowTcpForwarding local`, restricting TCP forwards to loopback. Prevents the VPS from being used as a general-purpose jump host.
+- **`lib/pangolin.sh` — Pangolin config file permissions** — `chmod 600` added for `/opt/pangolin/config/config.yml` on the VPS. The config contains secrets (DB passwords, JWT keys).
+- **`lib/pangolin.sh` — Newt secrets in compose env** — `NEWT_SECRET`, `NEWT_ID`, and `PANGOLIN_ENDPOINT` were written inline in the Newt docker-compose `environment:` block. Moved to `secrets/newt.env` (chmod 600) referenced via `env_file:`.
+- **`templates/pangolin/pangolin-compose.yml.tmpl` — mutable image tags** — Added comment block documenting that `ee-latest` and `latest` tags are mutable; advises pinning images to SHA digests for production use with instructions on how to verify digests.
+- **`lib/state.sh` — `state_set_bool()` value validation** — enforces only `true` or `false` as valid values, preventing boolean fields from being set to arbitrary strings.
+- **`lib/state.sh` — `state_set_num()` integer validation** — enforces non-negative integer values, preventing numeric fields from being set to negative numbers or non-numeric strings.
+- **`lib/common.sh` — `render_template()` single-pass substitution** — added comment documenting that template rendering is single-pass and template variable names must not contain content matching other variable patterns.
+- **`lib/state.sh` — `state_init()` permissions race** — `chmod 600` is now called immediately after the heredoc write (before any further state operations) to minimise the window during which the file is world-readable.
+
+---
+
 ## [0.8.6] — 2026-03-05
 
 ### Security — `setup_pangolin.cjs` audit and hardening

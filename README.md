@@ -2,7 +2,7 @@
 
 An interactive setup wizard and management CLI for a self-hosted media stack. No port forwarding, no exposed home IP, no router changes required.
 
-[![Version](https://img.shields.io/badge/version-0.8.6-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.8.11-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee)](https://buymeacoffee.com/techbutton)
 
@@ -43,18 +43,83 @@ For a TUI experience run `./gui.sh` instead. For unattended installs, copy `port
 
 All methods avoid port forwarding and work with CGNAT. Your home IP is never exposed. See [Remote Access Guide](docs/remote-access.md) for the full comparison.
 
+> **Testers wanted!** Pangolin is the most actively tested tunnel method. If you use **Cloudflare Tunnel**, **Tailscale**, **Headscale**, or **Netbird**, your testing and feedback would be very welcome. Open an issue or start a discussion to share what works, what breaks, and any rough edges you hit. Every report helps.
+
 ---
 
 ## Security
 
-### Code Security
+### Security Audits
 
-`setup_pangolin.cjs` was audited and patched in v0.8.6:
+Portless has been through multiple structured security reviews. Below is a record of each process, what was found, and what was fixed.
 
-- **Path traversal** — config file path is now resolved and constrained to `/tmp/`
-- **SQL injection hardening** — `getColumns()` uses an explicit table-name allowlist; all dynamic column names are derived from hardcoded ternary pairs with no user input in the SQL-building path
-- **Secret exposure** — `newtSecret` is no longer echoed to stdout or written to the install log; secrets are redacted in the log via `sed` in `pangolin.sh`
-- **Input validation** — all config fields are validated for presence, type, length, and email format before any database operations
+---
+
+#### v0.8.6 — Initial code audit (`setup_pangolin.cjs`)
+
+Manual review of the Pangolin initial-setup script:
+
+| Finding | Fix |
+|---------|-----|
+| Path traversal — `process.argv[2]` not constrained | `path.resolve()` + `/tmp/` prefix check before any file access |
+| SQL injection — `PRAGMA table_info(tableName)` with unsanitised input | Explicit `ALLOWED_TABLES` allowlist; all dynamic column names from hardcoded ternary pairs |
+| `newtSecret` echoed to stdout and log | Removed from `SETUP_RESULT` output; caller uses locally-held value |
+| No input validation on config fields | All 8 fields validated for presence, type, max length, and email format before DB operations |
+
+---
+
+#### v0.8.11 — Full SDL + STRIDE + PASTA review
+
+A three-process security review was run across the entire codebase.
+
+##### SDL (Security Development Lifecycle) — 11 findings fixed
+
+| # | Severity | File | Finding | Fix |
+|---|----------|------|---------|-----|
+| 1 | 🔴 High | `lib/state.sh` | State file (stores CF token, tunnel token, SSH password, Newt secret) created with default world-readable permissions | Added `chmod 600` immediately after creation in `state_init()` |
+| 2 | 🔴 High | `lib/pangolin.sh` | SSH public key injection — `pub_key_content` interpolated inside single quotes in remote shell string; a key containing `'` breaks out and executes arbitrary commands | Replaced interpolation with a pipe: `printf '%s\n' "$pub_key_content" \| _pang_ssh "cat >> ~/.ssh/authorized_keys"` |
+| 3 | 🔴 High | `lib/pangolin.sh` | `PANGOLIN_ORG_ID` from user input injected directly into a remote `node -e` shell string with no validation | Added `^[a-z0-9][a-z0-9_-]*$` guard in both `_pang_prompt_manual_credentials` and `pangolin_wizard_existing` |
+| 4 | 🟡 Med | `lib/common.sh` | Log file created at `/tmp/portless-install.log` with default (world-readable) permissions; may contain secrets in error output | `_log_to_file` now uses `install -m 600` to create the file on first write |
+| 5 | 🟡 Med | `lib/state.sh` | SSH password stored in plaintext in state JSON | Mitigated by fix #1 (chmod 600); documented as residual risk |
+| 6 | 🟡 Med | `lib/pangolin.sh` | `sed` log redaction only escaped `/`; passwords containing `.`, `*`, `[`, `\`, `^`, `$`, `&` were not matched, leaving secrets in the log | Replaced with `_pang_sed_escape()` helper that escapes all basic-regex metacharacters before substitution |
+| 7 | 🟡 Med | `lib/state.sh` | `state_set_num` and `state_set_bool` interpolated `key` and `value` directly into a jq filter with no validation — jq injection possible | Added `^[a-zA-Z0-9._]+$` check on key and type-specific check on value (`^[0-9]+$` / `true\|false`) in both functions |
+| 8 | 🟡 Med | `lib/pangolin.sh` | `resource_id` parameter used in inline remote `node -e` SQL without validation in `pangolin_remove_resource` | Added `^[0-9]+$` guard at function entry |
+| 9 | 🟢 Low | `lib/pangolin.sh` | `StrictHostKeyChecking=accept-new` silently accepts any VPS host key on first connection — MITM risk | Added `log_warn` TOFU notice in both key and password auth branches of `_pang_init_connection` |
+| 10 | 🟢 Low | `lib/cloudflare.sh` | `noTLSVerify: true` in Cloudflare tunnel ingress config — would silently suppress TLS errors if service URL changed from HTTP to HTTPS | Changed to `noTLSVerify: false` |
+| 11 | 🟢 Low | `lib/common.sh` | `render_template` single-pass substitution — a value containing `{KEY}` matching a later argument is itself substituted | Added explanatory comment to document the behaviour for future maintainers |
+
+##### STRIDE analysis — 8 additional findings fixed
+
+STRIDE was applied across all components: installer, state file, SSH transport, VPS/Pangolin stack, Traefik/Docker config, and runtime traffic.
+
+| Threat | Finding | Fix |
+|--------|---------|-----|
+| **Spoofing** | `netbird.sh` and `headscale.sh` used `StrictHostKeyChecking=accept-new` with no TOFU warning | Added `log_warn` TOFU notice to `_nb_init_ssh()` and `_hs_init_connection()` — consistent with pangolin.sh |
+| **Spoofing** | All Docker images used mutable `:latest` / `:ee-latest` tags — supply chain attack possible via compromised registry account | Added comment to `pangolin-compose.yml.tmpl` documenting SHA digest pinning for production use |
+| **Elevation of Privilege** | `AllowTcpForwarding yes` in VPS SSH hardening allows VPS to be used as a jump host to arbitrary internet hosts | Changed to `AllowTcpForwarding local` — forwarding restricted to loopback destinations only |
+| **Information Disclosure** | Pangolin `config.yml` (contains `SECRET`) uploaded via SCP with no explicit permissions | Added `chmod 600 /opt/pangolin/config/config.yml` alongside the existing `acme.json` chmod |
+| **Information Disclosure** | `NEWT_SECRET` and `NEWT_ID` embedded as plaintext environment variables in the Docker Compose file — visible via `docker inspect` and readable from disk by any Docker user | Moved to `secrets/newt.env` (mode 600); Compose references via `env_file:` |
+| **Information Disclosure** | `TUNNEL_TOKEN` embedded as plaintext environment variable in the Cloudflare Compose service block | Moved to `secrets/cloudflared.env` (mode 600); Compose references via `env_file:` |
+| **Denial of Service** | Pangolin internal port allocator (`pangolin_next_port`) incremented without bounds — would silently overflow past 65535 | Added warning at port ≥ 65500 and hard `die` at port ≥ 65535 |
+
+##### PASTA analysis — key attack paths modelled
+
+*Process for Attack Simulation and Threat Analysis (7 stages) was used to validate the threat landscape end-to-end.*
+
+Three credible attack paths were modelled:
+
+1. **Credential theft from state file** — an attacker with local shell access reads `.portless-state.json` and extracts the CF API token to modify DNS records, or the SSH password to reach VPS root. Mitigated by chmod 600 on state file and secrets env files; residual risk is plaintext-at-rest.
+
+2. **Supply chain via `:latest` image tags** — a compromised Docker Hub account pushes a malicious image as `:latest`; on next `docker compose pull` it runs in place of the real container. The Newt container (`NET_ADMIN` capability) is the highest-impact target. Mitigated by digest pinning documentation; residual risk if pinning is not practised.
+
+3. **VPS container escape** — an attacker finds RCE in Pangolin web interface, escapes to VPS host (Gerbil runs with `SYS_MODULE`), and observes or disrupts the WireGuard tunnel to the home server. Mitigated by the socket-proxy pattern on the home side; VPS side relies on image integrity and Pangolin upstream security.
+
+**Residual risks accepted (homelab threat model):**
+- Secrets remain plaintext in `state.json` (chmod 600; recommend `age`-based encryption for high-sensitivity deployments)
+- Image digest pinning is documented but not enforced (would require per-release updates to templates)
+- VPS SSH defaults to root user (non-root deployment documented as a recommended hardening step)
+
+---
 
 ### Authentication
 Every service is protected by a single login — pick one during setup:

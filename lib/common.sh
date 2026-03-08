@@ -22,6 +22,10 @@ fi
 # Write a plain-text (no ANSI) line to the log file
 _log_to_file() {
   local logfile="${LOG_FILE:-/tmp/portless-install.log}"
+  # Create with restricted permissions on first write to protect secrets in log output
+  if [[ ! -f "$logfile" ]]; then
+    install -m 600 /dev/null "$logfile" 2>/dev/null || true
+  fi
   printf '%s\n' "$*" >> "$logfile" 2>/dev/null || true
 }
 
@@ -349,6 +353,9 @@ render_template() {
   # Remaining args: KEY=VALUE pairs
   local content
   content=$(cat "$template") || die "Cannot read template: $template"
+  # NOTE: substitution is single-pass per key in argument order.
+  # If a value contains {KEY} patterns matching later keys, those will
+  # also be substituted. Callers must ensure values don't contain {WORD} literals.
   while [[ $# -gt 0 ]]; do
     local key="${1%%=*}"
     local value="${1#*=}"

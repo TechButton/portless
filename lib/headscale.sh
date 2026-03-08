@@ -27,6 +27,9 @@ _hs_init_connection() {
         || die "Could not install sshpass — please install it manually"
     fi
   fi
+
+  # TOFU: first connection auto-accepts the host key — verify VPS fingerprint manually for new servers
+  log_warn "SSH: first connection will auto-accept the VPS host key. Verify the fingerprint manually if this is a new server."
 }
 
 _hs_ssh() {
