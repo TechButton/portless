@@ -180,7 +180,7 @@ cf_configure_tunnel_wildcard() {
             "hostname": ("*." + $domain),
             "service": "http://traefik:80",
             "originRequest": {
-              "noTLSVerify": true,
+              "noTLSVerify": false,
               "httpHostHeader": ""
             }
           },
@@ -296,13 +296,22 @@ cf_setup_cloudflared() {
 
   log_sub "Configuring cloudflared container..."
 
+  # Write the tunnel token to a restricted env file (600) rather than embedding
+  # it in the compose file where it is visible in plain text to any Docker user.
+  local secrets_dir
+  secrets_dir="$(dirname "$compose_file")/secrets"
+  ensure_dir "$secrets_dir"
+  local cf_env_file="${secrets_dir}/cloudflared.env"
+  printf 'TUNNEL_TOKEN=%s\n' "$tunnel_token" > "$cf_env_file"
+  chmod 600 "$cf_env_file"
+  log_sub "Cloudflare tunnel token written to ${cf_env_file} (mode 600)"
+
   if grep -q "container_name: cloudflared" "$compose_file" 2>/dev/null; then
-    log_sub "cloudflared already in compose — updating token..."
-    sed -i "s|TUNNEL_TOKEN=.*|TUNNEL_TOKEN=${tunnel_token}|g" "$compose_file"
+    log_sub "cloudflared already in compose — token updated in env file"
     return 0
   fi
 
-  cat >> "$compose_file" <<EOF
+  cat >> "$compose_file" <<'EOF'
 
   ########## CLOUDFLARE TUNNEL ##########
   cloudflared:
@@ -310,8 +319,8 @@ cf_setup_cloudflared() {
     container_name: cloudflared
     restart: unless-stopped
     command: tunnel run
-    environment:
-      - TUNNEL_TOKEN=${tunnel_token}
+    env_file:
+      - ./secrets/cloudflared.env
     networks:
       - t3_proxy
     security_opt:

@@ -81,6 +81,7 @@ state_init() {
   "apps": {}
 }
 EOF
+    chmod 600 "$STATE_FILE"
   fi
 }
 
@@ -116,6 +117,8 @@ state_set_kv() {
 state_set_num() {
   local key="$1"
   local value="$2"
+  [[ "$key" =~ ^[a-zA-Z0-9._]+$ ]]  || die "state_set_num: invalid key: $key"
+  [[ "$value" =~ ^[0-9]+$ ]]         || die "state_set_num: value must be a non-negative integer: $value"
   state_set ".${key} = ${value}"
 }
 
@@ -123,6 +126,8 @@ state_set_num() {
 state_set_bool() {
   local key="$1"
   local value="$2"
+  [[ "$key" =~ ^[a-zA-Z0-9._]+$ ]]               || die "state_set_bool: invalid key: $key"
+  [[ "$value" == "true" || "$value" == "false" ]]  || die "state_set_bool: value must be 'true' or 'false': $value"
   state_set ".${key} = ${value}"
 }
 
@@ -145,6 +150,12 @@ pangolin_next_port() {
   local current
   current=$(state_get '.tunnel.pangolin.next_internal_port')
   current="${current:-65400}"
+  if (( current >= 65535 )); then
+    die "Pangolin internal port range exhausted (reached ${current}). Cannot allocate more ports."
+  fi
+  if (( current >= 65500 )); then
+    log_warn "Pangolin internal port range nearly exhausted (current: ${current}). Consider reviewing allocated ports."
+  fi
   local next=$((current + 1))
   state_set ".tunnel.pangolin.next_internal_port = $next"
   echo "$current"

@@ -70,10 +70,14 @@ _pang_init_connection() {
 
   if [[ "$_PANG_SSH_AUTH" == "key" ]]; then
     _PANG_SSH_KEY="$key_or_pass"
+    # TOFU: first connection auto-accepts the host key — verify VPS fingerprint manually for new servers
+    log_warn "SSH: first connection will auto-accept the VPS host key. Verify the fingerprint manually if this is a new server."
     _PANG_SSH_BASE_OPTS="-i ${_PANG_SSH_KEY} -p ${_PANG_SSH_PORT} -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o BatchMode=yes"
   else
     _PANG_SSH_PASS="$key_or_pass"
     _pang_require_sshpass
+    # TOFU: first connection auto-accepts the host key — verify VPS fingerprint manually for new servers
+    log_warn "SSH: first connection will auto-accept the VPS host key. Verify the fingerprint manually if this is a new server."
     _PANG_SSH_BASE_OPTS="-p ${_PANG_SSH_PORT} -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o PasswordAuthentication=yes -o PubkeyAuthentication=no"
   fi
 }
@@ -248,8 +252,8 @@ pangolin_install_vps() {
   _pang_scp_to "$tmp_dynamic" "/opt/pangolin/config/traefik/dynamic_config.yml" \
     >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1 || die "Could not upload Traefik dynamic config file"
 
-  # Set correct permissions on acme.json (Traefik requirement)
-  _pang_ssh "touch /opt/pangolin/config/letsencrypt/acme.json && chmod 600 /opt/pangolin/config/letsencrypt/acme.json" \
+  # Set correct permissions on acme.json (Traefik requirement) and config.yml (contains secret)
+  _pang_ssh "touch /opt/pangolin/config/letsencrypt/acme.json && chmod 600 /opt/pangolin/config/letsencrypt/acme.json && chmod 600 /opt/pangolin/config/config.yml" \
     >> ${LOG_FILE:-/tmp/portless-install.log} 2>&1
 
   rm -f "$tmp_compose" "$tmp_config" "$tmp_traefik" "$tmp_dynamic"
@@ -471,10 +475,15 @@ pangolin_setup_admin_and_site() {
     "sudo docker exec pangolin node /app/pangolin-setup.cjs /tmp/pangolin-cfg.json 2>&1" \
     2>/dev/null) || true
 
-  # Redact any accidental secret echoes before writing to log
+  # Redact any accidental secret echoes before writing to log.
+  # Escape all sed basic-regex metacharacters so passwords with special chars are matched literally.
+  _pang_sed_escape() { printf '%s' "$1" | sed 's/[]\/$*.^[]/\\&/g'; }
+  local _pw_pat _sec_pat
+  _pw_pat=$(_pang_sed_escape "$admin_password")
+  _sec_pat=$(_pang_sed_escape "$newt_secret")
   echo "$api_result" | sed \
-    -e "s/${admin_password//\//\\/}/[REDACTED]/g" \
-    -e "s/${newt_secret//\//\\/}/[REDACTED]/g" \
+    -e "s/${_pw_pat}/[REDACTED]/g" \
+    -e "s/${_sec_pat}/[REDACTED]/g" \
     >> "${LOG_FILE:-/tmp/portless-install.log}"
 
   # Clean up
@@ -529,6 +538,8 @@ _pang_prompt_manual_credentials() {
   echo ""
   prompt_input "Pangolin organization ID" ""
   PANGOLIN_ORG_ID="$REPLY"
+  [[ "$PANGOLIN_ORG_ID" =~ ^[a-z0-9][a-z0-9_-]*$ ]] \
+    || die "Invalid organization ID — only lowercase letters, numbers, hyphens, and underscores are allowed"
 
   # Auto-detect site ID from the DB — users can't see the integer siteId in the Pangolin web UI
   log_sub "Looking up site ID from Pangolin database..."
@@ -586,7 +597,7 @@ declare -A SETTINGS=(
   ["MaxAuthTries"]="3"
   ["LoginGraceTime"]="30"
   ["X11Forwarding"]="no"
-  ["AllowTcpForwarding"]="yes"
+  ["AllowTcpForwarding"]="local"
   ["PermitEmptyPasswords"]="no"
 )
 
@@ -640,7 +651,8 @@ pangolin_copy_ssh_key() {
   pub_key_content=$(cat "$pub_key_path")
 
   log_sub "Copying SSH public key to VPS..."
-  _pang_ssh "mkdir -p ~/.ssh && chmod 700 ~/.ssh && printf '%s\n' '${pub_key_content}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo OK"
+  # Pipe the key content rather than interpolating it, to avoid single-quote injection
+  printf '%s\n' "$pub_key_content" | _pang_ssh "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo OK"
   log_ok "SSH public key installed on VPS"
   log_info "Key file: ${pub_key_path%.pub}"
 }
@@ -659,17 +671,25 @@ pangolin_setup_newt() {
 
   log_sub "Configuring Newt tunnel client..."
 
-  # Check if newt service already exists in compose
+  # Write credentials to a restricted env file (600) rather than embedding them
+  # in the compose file where they are visible in plain text to any Docker user.
+  local secrets_dir
+  secrets_dir="$(dirname "$compose_file")/secrets"
+  ensure_dir "$secrets_dir"
+  local newt_env_file="${secrets_dir}/newt.env"
+  printf 'PANGOLIN_ENDPOINT=https://%s\nNEWT_ID=%s\nNEWT_SECRET=%s\n' \
+    "$pangolin_host" "$newt_id" "$newt_secret" > "$newt_env_file"
+  chmod 600 "$newt_env_file"
+  log_sub "Newt credentials written to ${newt_env_file} (mode 600)"
+
+  # Check if newt service already exists in compose — update env file only
   if grep -q "container_name: newt" "$compose_file" 2>/dev/null; then
-    log_sub "Newt service already present — updating credentials..."
-    sed -i "s|NEWT_ID=.*|NEWT_ID=${newt_id}|g" "$compose_file"
-    sed -i "s|NEWT_SECRET=.*|NEWT_SECRET=${newt_secret}|g" "$compose_file"
-    sed -i "s|PANGOLIN_ENDPOINT=.*|PANGOLIN_ENDPOINT=https://${pangolin_host}|g" "$compose_file"
+    log_sub "Newt service already present — credentials updated in env file"
     return 0
   fi
 
-  # Append newt service to compose file
-  cat >> "$compose_file" <<EOF
+  # Append newt service to compose file (env_file keeps secrets off the compose file)
+  cat >> "$compose_file" <<'EOF'
 
   ########## PANGOLIN TUNNEL ##########
   newt:
@@ -680,10 +700,8 @@ pangolin_setup_newt() {
       - NET_ADMIN
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
-    environment:
-      - PANGOLIN_ENDPOINT=https://${pangolin_host}
-      - NEWT_ID=${newt_id}
-      - NEWT_SECRET=${newt_secret}
+    env_file:
+      - ./secrets/newt.env
     networks:
       - socket_proxy
 EOF
@@ -765,6 +783,7 @@ pangolin_register_resource() {
 
 pangolin_remove_resource() {
   local resource_id="$1"
+  [[ "$resource_id" =~ ^[0-9]+$ ]] || die "pangolin_remove_resource: invalid resource ID — must be a positive integer"
 
   local vps_host ssh_user ssh_auth ssh_key ssh_pass
   vps_host=$(state_get '.tunnel.pangolin.vps_host')
@@ -859,6 +878,8 @@ pangolin_wizard_existing() {
 
   prompt_input "Pangolin organization ID" ""
   PANGOLIN_ORG_ID="$REPLY"
+  [[ "$PANGOLIN_ORG_ID" =~ ^[a-z0-9][a-z0-9_-]*$ ]] \
+    || die "Invalid organization ID — only lowercase letters, numbers, hyphens, and underscores are allowed"
 
   prompt_input "Pangolin site ID (integer)" ""
   PANGOLIN_SITE_ID="$REPLY"
